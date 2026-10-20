@@ -10,5 +10,3 @@ build/
 .toolchains/
 __pycache__/
 .venv/
-
-.toolchains/
