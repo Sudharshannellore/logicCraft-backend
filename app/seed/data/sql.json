@@ -1,0 +1,461 @@
+{
+  "tables": [
+    {
+      "name": "employees",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INT"
+        },
+        {
+          "name": "name",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "department",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "salary",
+          "type": "DECIMAL"
+        }
+      ],
+      "rows": [
+        {
+          "id": 1,
+          "name": "Alice Chen",
+          "department": "Engineering",
+          "salary": 112000
+        },
+        {
+          "id": 2,
+          "name": "Brian Kim",
+          "department": "Engineering",
+          "salary": 98000
+        },
+        {
+          "id": 3,
+          "name": "Carla Diaz",
+          "department": "Sales",
+          "salary": 76000
+        },
+        {
+          "id": 4,
+          "name": "Derek Osei",
+          "department": "Sales",
+          "salary": 81000
+        },
+        {
+          "id": 5,
+          "name": "Elena Novak",
+          "department": "Marketing",
+          "salary": 72000
+        }
+      ]
+    },
+    {
+      "name": "users",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INT"
+        },
+        {
+          "name": "email",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "created_at",
+          "type": "DATE"
+        }
+      ],
+      "rows": [
+        {
+          "id": 1,
+          "email": "ava@codequest.dev",
+          "created_at": "2026-01-14"
+        },
+        {
+          "id": 2,
+          "email": "liam@codequest.dev",
+          "created_at": "2026-02-02"
+        },
+        {
+          "id": 3,
+          "email": "noah@codequest.dev",
+          "created_at": "2026-03-21"
+        }
+      ]
+    },
+    {
+      "name": "orders",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INT"
+        },
+        {
+          "name": "user_id",
+          "type": "INT"
+        },
+        {
+          "name": "product_id",
+          "type": "INT"
+        },
+        {
+          "name": "total",
+          "type": "DECIMAL"
+        }
+      ],
+      "rows": [
+        {
+          "id": 1,
+          "user_id": 1,
+          "product_id": 2,
+          "total": 49.99
+        },
+        {
+          "id": 2,
+          "user_id": 2,
+          "product_id": 1,
+          "total": 19.99
+        },
+        {
+          "id": 3,
+          "user_id": 1,
+          "product_id": 3,
+          "total": 99
+        }
+      ]
+    },
+    {
+      "name": "products",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INT"
+        },
+        {
+          "name": "name",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "price",
+          "type": "DECIMAL"
+        }
+      ],
+      "rows": [
+        {
+          "id": 1,
+          "name": "Logicraft Pro",
+          "price": 19.99
+        },
+        {
+          "id": 2,
+          "name": "Logicraft Team",
+          "price": 49.99
+        },
+        {
+          "id": 3,
+          "name": "Logicraft Lifetime",
+          "price": 99
+        }
+      ]
+    }
+  ],
+  "problems": [
+    {
+      "id": "sql-high-earners",
+      "title": "High Earners",
+      "slug": "high-earners",
+      "difficulty": "easy",
+      "xp": 80,
+      "acceptanceRate": 71,
+      "tags": [
+        "WHERE",
+        "Filtering"
+      ],
+      "description": "List the `name` and `salary` of every employee who earns more than 80,000.",
+      "tablesUsed": [
+        "employees"
+      ],
+      "starterQuery": "-- Find employees earning more than 80,000\nSELECT ",
+      "hints": [
+        "Filter rows with a WHERE clause.",
+        "Compare the salary column with the > operator."
+      ],
+      "requiredClauses": [
+        {
+          "fragment": "employees",
+          "hint": "Query the employees table."
+        },
+        {
+          "fragment": "where",
+          "hint": "Filter rows with a WHERE clause."
+        },
+        {
+          "fragment": "salary",
+          "hint": "Your condition should use the salary column."
+        },
+        {
+          "fragment": ">",
+          "hint": "Use > to keep only salaries above the threshold."
+        }
+      ],
+      "expectedColumns": [
+        "name",
+        "salary"
+      ],
+      "expectedRows": [
+        {
+          "name": "Alice Chen",
+          "salary": 112000
+        },
+        {
+          "name": "Brian Kim",
+          "salary": 98000
+        },
+        {
+          "name": "Derek Osei",
+          "salary": 81000
+        }
+      ],
+      "successNote": "Clean filter. On a large table, an index on salary would let the database skip non-matching rows entirely.",
+      "ordered": false
+    },
+    {
+      "id": "sql-cheapest-products",
+      "title": "Cheapest First",
+      "slug": "cheapest-products",
+      "difficulty": "easy",
+      "xp": 60,
+      "acceptanceRate": 78,
+      "tags": [
+        "ORDER BY",
+        "Sorting"
+      ],
+      "description": "Return every product `name` and `price`, sorted from the cheapest to the most expensive.",
+      "tablesUsed": [
+        "products"
+      ],
+      "starterQuery": "-- Sort products by price\nSELECT ",
+      "hints": [
+        "ORDER BY sorts results.",
+        "Ascending (ASC) is the default sort direction."
+      ],
+      "requiredClauses": [
+        {
+          "fragment": "products",
+          "hint": "Query the products table."
+        },
+        {
+          "fragment": "order by",
+          "hint": "Sort the results with ORDER BY."
+        },
+        {
+          "fragment": "price",
+          "hint": "Sort by the price column."
+        }
+      ],
+      "expectedColumns": [
+        "name",
+        "price"
+      ],
+      "expectedRows": [
+        {
+          "name": "Logicraft Pro",
+          "price": 19.99
+        },
+        {
+          "name": "Logicraft Team",
+          "price": 49.99
+        },
+        {
+          "name": "Logicraft Lifetime",
+          "price": 99
+        }
+      ],
+      "successNote": "Correct. Selecting only the columns you need (instead of SELECT *) keeps result sets small — nice habit.",
+      "ordered": true
+    },
+    {
+      "id": "sql-department-averages",
+      "title": "Department Averages",
+      "slug": "department-averages",
+      "difficulty": "medium",
+      "xp": 110,
+      "acceptanceRate": 54,
+      "tags": [
+        "GROUP BY",
+        "Aggregates"
+      ],
+      "description": "For each `department`, return the department name and its average salary as `avg_salary`.",
+      "tablesUsed": [
+        "employees"
+      ],
+      "starterQuery": "-- Average salary per department\nSELECT ",
+      "hints": [
+        "Aggregate functions like AVG() collapse many rows into one value.",
+        "GROUP BY decides which rows get collapsed together."
+      ],
+      "requiredClauses": [
+        {
+          "fragment": "employees",
+          "hint": "Query the employees table."
+        },
+        {
+          "fragment": "avg(",
+          "hint": "Use AVG(salary) to compute the average."
+        },
+        {
+          "fragment": "group by",
+          "hint": "Group rows with GROUP BY so you get one row per department."
+        },
+        {
+          "fragment": "department",
+          "hint": "Group by the department column."
+        }
+      ],
+      "expectedColumns": [
+        "department",
+        "avg_salary"
+      ],
+      "expectedRows": [
+        {
+          "department": "Engineering",
+          "avg_salary": 105000
+        },
+        {
+          "department": "Sales",
+          "avg_salary": 78500
+        },
+        {
+          "department": "Marketing",
+          "avg_salary": 72000
+        }
+      ],
+      "successNote": "Your query works correctly. If this runs often on a large dataset, consider an index on department.",
+      "ordered": false
+    },
+    {
+      "id": "sql-customer-spend",
+      "title": "Customer Spend",
+      "slug": "customer-spend",
+      "difficulty": "medium",
+      "xp": 120,
+      "acceptanceRate": 46,
+      "tags": [
+        "SUM",
+        "GROUP BY"
+      ],
+      "description": "Calculate how much each customer has spent. Return `user_id` and the sum of their order totals as `total_spent`.",
+      "tablesUsed": [
+        "orders"
+      ],
+      "starterQuery": "-- Total spent per user\nSELECT ",
+      "hints": [
+        "SUM() adds up a column across grouped rows.",
+        "Group by the column that identifies a customer."
+      ],
+      "requiredClauses": [
+        {
+          "fragment": "orders",
+          "hint": "Query the orders table."
+        },
+        {
+          "fragment": "sum(",
+          "hint": "Use SUM(total) to add up each customer’s orders."
+        },
+        {
+          "fragment": "group by",
+          "hint": "Group rows with GROUP BY."
+        },
+        {
+          "fragment": "user_id",
+          "hint": "Group by user_id so you get one row per customer."
+        }
+      ],
+      "expectedColumns": [
+        "user_id",
+        "total_spent"
+      ],
+      "expectedRows": [
+        {
+          "user_id": 1,
+          "total_spent": 148.99
+        },
+        {
+          "user_id": 2,
+          "total_spent": 19.99
+        }
+      ],
+      "successNote": "Spot on. Add ORDER BY total_spent DESC if you want your biggest spenders at the top.",
+      "ordered": false
+    },
+    {
+      "id": "sql-who-bought-what",
+      "title": "Who Bought What",
+      "slug": "who-bought-what",
+      "difficulty": "hard",
+      "xp": 180,
+      "acceptanceRate": 29,
+      "tags": [
+        "JOIN",
+        "Relations"
+      ],
+      "description": "Show each order as the customer’s `email` and the `product` name they bought. You’ll need to combine three tables.",
+      "tablesUsed": [
+        "orders",
+        "users",
+        "products"
+      ],
+      "starterQuery": "-- Join orders with users and products\nSELECT ",
+      "hints": [
+        "orders.user_id points at users.id; orders.product_id points at products.id.",
+        "Chain two JOIN … ON clauses."
+      ],
+      "requiredClauses": [
+        {
+          "fragment": "orders",
+          "hint": "Start from the orders table."
+        },
+        {
+          "fragment": "join",
+          "hint": "Combine tables with JOIN."
+        },
+        {
+          "fragment": "users",
+          "hint": "Join users to get each customer’s email."
+        },
+        {
+          "fragment": "products",
+          "hint": "Join products to get each product name."
+        },
+        {
+          "fragment": " on ",
+          "hint": "Every JOIN needs an ON condition that matches the keys."
+        }
+      ],
+      "expectedColumns": [
+        "email",
+        "product"
+      ],
+      "expectedRows": [
+        {
+          "email": "ava@codequest.dev",
+          "product": "Logicraft Team"
+        },
+        {
+          "email": "liam@codequest.dev",
+          "product": "Logicraft Pro"
+        },
+        {
+          "email": "ava@codequest.dev",
+          "product": "Logicraft Lifetime"
+        }
+      ],
+      "successNote": "Excellent — a three-way join on foreign keys. Aliasing tables (o, u, p) keeps longer joins readable.",
+      "ordered": false
+    }
+  ]
+}

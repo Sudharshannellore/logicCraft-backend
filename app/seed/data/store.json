@@ -1,0 +1,152 @@
+{
+  "xpPlans": [
+    {
+      "id": "starter",
+      "name": "Starter",
+      "monthlyXp": 1000,
+      "price": {
+        "monthly": 99,
+        "yearly": 990
+      },
+      "perks": [
+        "1,000 XP every month",
+        "≈ 100 Quest AI answers",
+        "Unused XP never expires"
+      ],
+      "sprite": "potion"
+    },
+    {
+      "id": "pro",
+      "name": "Pro",
+      "monthlyXp": 3000,
+      "price": {
+        "monthly": 249,
+        "yearly": 2490
+      },
+      "perks": [
+        "3,000 XP every month",
+        "Enough to unlock every premium resume template",
+        "Tailor resumes for ~60 job applications",
+        "Unused XP never expires"
+      ],
+      "sprite": "gem",
+      "popular": true
+    },
+    {
+      "id": "elite",
+      "name": "Elite",
+      "monthlyXp": 7500,
+      "price": {
+        "monthly": 499,
+        "yearly": 4990
+      },
+      "perks": [
+        "7,500 XP every month",
+        "Best value of the three plans",
+        "≈ 750 Quest AI answers",
+        "Unused XP never expires"
+      ],
+      "sprite": "crown"
+    }
+  ],
+  "xpPacks": [
+    {
+      "id": "pack-500",
+      "xp": 500,
+      "bonusPercent": 0,
+      "price": 49
+    },
+    {
+      "id": "pack-1200",
+      "xp": 1200,
+      "bonusPercent": 20,
+      "price": 99
+    },
+    {
+      "id": "pack-3000",
+      "xp": 3000,
+      "bonusPercent": 50,
+      "price": 199
+    },
+    {
+      "id": "pack-8000",
+      "xp": 8000,
+      "bonusPercent": 75,
+      "price": 449
+    }
+  ],
+  "resumeTemplates": [
+    {
+      "id": "classic",
+      "name": "Classic",
+      "description": "Clean single column with green section rules. A safe choice for any role.",
+      "cost": 0
+    },
+    {
+      "id": "minimal",
+      "name": "Minimal",
+      "description": "Centered serif header and quiet typography. Lets the content speak.",
+      "cost": 0
+    },
+    {
+      "id": "ats",
+      "name": "ATS Plain",
+      "description": "Zero styling, standard fonts, simple headings — the easiest for resume scanners to read.",
+      "cost": 80
+    },
+    {
+      "id": "professional",
+      "name": "Professional",
+      "description": "Name on the left, contact on the right, firm black section rules.",
+      "cost": 80
+    },
+    {
+      "id": "harvard",
+      "name": "Harvard",
+      "description": "The classic Times New Roman university format. Education comes first.",
+      "cost": 100
+    },
+    {
+      "id": "student",
+      "name": "Fresher",
+      "description": "Built for students and new grads: education, skills and projects lead.",
+      "cost": 100
+    },
+    {
+      "id": "developer",
+      "name": "Developer",
+      "description": "Monospace headings and a plain tech-stack line — made for engineering roles.",
+      "cost": 100
+    },
+    {
+      "id": "typewriter",
+      "name": "Typewriter",
+      "description": "All-monospace, uppercase headings. Simple, distinctive and fully readable.",
+      "cost": 100
+    },
+    {
+      "id": "compact",
+      "name": "Compact",
+      "description": "Small type with headings in the margin — fits a lot onto one page.",
+      "cost": 120
+    },
+    {
+      "id": "elegant",
+      "name": "Elegant",
+      "description": "Georgia serif, letter-spaced name and italic headings in deep red.",
+      "cost": 120
+    },
+    {
+      "id": "bold",
+      "name": "Bold",
+      "description": "Heavy uppercase name and thick black rules that stand out on a printout.",
+      "cost": 150
+    },
+    {
+      "id": "executive",
+      "name": "Executive",
+      "description": "Serif headings in navy with thin gold accents for a polished, senior look.",
+      "cost": 150
+    }
+  ]
+}

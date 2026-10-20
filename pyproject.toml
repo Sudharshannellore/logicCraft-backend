@@ -1,0 +1,42 @@
+[project]
+name = "logicraft-backend"
+version = "0.1.0"
+description = "FastAPI + MongoDB backend for the Logicraft gamified learning platform"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "pymongo>=4.10",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+    "httpx>=0.28",
+    "pyjwt>=2.9",
+    "argon2-cffi>=23.1",
+    "email-validator>=2.2",
+    "python-multipart>=0.0.12",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "respx>=0.22",
+    "ruff>=0.8",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+ignore = [
+    "B008",  # FastAPI's Depends() in defaults is idiomatic
+    "E501",  # the formatter owns line length; long user-facing strings stay unbroken
+]

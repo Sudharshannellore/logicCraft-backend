@@ -1,0 +1,237 @@
+{
+  "achievements": [
+    {
+      "id": "a1",
+      "icon": "flame",
+      "title": "7 Day Streak",
+      "description": "Practiced for 7 days in a row.",
+      "rarity": "common",
+      "rule": {
+        "metric": "longest_streak",
+        "threshold": 7
+      }
+    },
+    {
+      "id": "a2",
+      "icon": "trophy",
+      "title": "First Boss Defeated",
+      "description": "Defeated your first Boss Battle.",
+      "rarity": "rare",
+      "rule": {
+        "metric": "bosses_defeated",
+        "threshold": 1
+      }
+    },
+    {
+      "id": "a3",
+      "icon": "lightning",
+      "title": "Speed Coder",
+      "description": "Won a Speed Round in 2 minutes or less.",
+      "rarity": "rare",
+      "rule": {
+        "metric": "speed_records",
+        "threshold": 1
+      }
+    },
+    {
+      "id": "a4",
+      "icon": "star",
+      "title": "Algorithm Master",
+      "description": "Solved 250 algorithm problems.",
+      "rarity": "epic",
+      "rule": {
+        "metric": "code_solved",
+        "threshold": 250
+      }
+    },
+    {
+      "id": "a5",
+      "icon": "bug",
+      "title": "Bug Hunter",
+      "description": "Completed 20 Debug Challenges.",
+      "rarity": "common",
+      "rule": {
+        "metric": "debug_won",
+        "threshold": 20
+      }
+    },
+    {
+      "id": "a6",
+      "icon": "floppy",
+      "title": "SQL Wizard",
+      "description": "Solved 50 SQL problems, joins and subqueries included.",
+      "rarity": "epic",
+      "rule": {
+        "metric": "sql_solved",
+        "threshold": 50
+      }
+    },
+    {
+      "id": "a7",
+      "icon": "medal",
+      "title": "100 Problems Solved",
+      "description": "Solved 100 coding problems.",
+      "rarity": "rare",
+      "rule": {
+        "metric": "problems_solved",
+        "threshold": 100
+      }
+    },
+    {
+      "id": "a8",
+      "icon": "crown",
+      "title": "League Champion",
+      "description": "Finished #1 in your league this week.",
+      "rarity": "legendary"
+    }
+  ],
+  "questTemplates": [
+    {
+      "id": "q-hash-tables",
+      "title": "Master Hash Tables",
+      "rewardXp": 250,
+      "tasks": [
+        {
+          "id": "t1",
+          "label": "Learn Hash Tables",
+          "event": "lesson_completed",
+          "target": 1
+        },
+        {
+          "id": "t2",
+          "label": "Complete 2 exercises",
+          "event": "problem_solved",
+          "target": 2
+        },
+        {
+          "id": "t3",
+          "label": "Solve a SQL challenge",
+          "event": "sql_solved",
+          "target": 1
+        },
+        {
+          "id": "t4",
+          "label": "Clear a Boss Battle stage",
+          "event": "boss_stage_cleared",
+          "target": 1
+        }
+      ]
+    },
+    {
+      "id": "q-sql-sprint",
+      "title": "SQL Sprint",
+      "rewardXp": 200,
+      "tasks": [
+        {
+          "id": "t1",
+          "label": "Finish a lesson",
+          "event": "lesson_completed",
+          "target": 1
+        },
+        {
+          "id": "t2",
+          "label": "Solve 2 SQL problems",
+          "event": "sql_solved",
+          "target": 2
+        },
+        {
+          "id": "t3",
+          "label": "Solve a coding problem",
+          "event": "problem_solved",
+          "target": 1
+        }
+      ]
+    },
+    {
+      "id": "q-duelist",
+      "title": "Duelist's Day",
+      "rewardXp": 220,
+      "tasks": [
+        {
+          "id": "t1",
+          "label": "Warm up: solve a problem",
+          "event": "problem_solved",
+          "target": 1
+        },
+        {
+          "id": "t2",
+          "label": "Win a friend duel",
+          "event": "duel_won",
+          "target": 1
+        },
+        {
+          "id": "t3",
+          "label": "Finish a lesson",
+          "event": "lesson_completed",
+          "target": 1
+        }
+      ]
+    },
+    {
+      "id": "q-scholar",
+      "title": "Scholar's Path",
+      "rewardXp": 180,
+      "tasks": [
+        {
+          "id": "t1",
+          "label": "Finish 3 lessons",
+          "event": "lesson_completed",
+          "target": 3
+        },
+        {
+          "id": "t2",
+          "label": "Put it to use: solve a problem",
+          "event": "problem_solved",
+          "target": 1
+        }
+      ]
+    },
+    {
+      "id": "q-boss-hunter",
+      "title": "Boss Hunter",
+      "rewardXp": 300,
+      "tasks": [
+        {
+          "id": "t1",
+          "label": "Clear 2 Boss Battle stages",
+          "event": "boss_stage_cleared",
+          "target": 2
+        },
+        {
+          "id": "t2",
+          "label": "Solve 2 coding problems",
+          "event": "problem_solved",
+          "target": 2
+        },
+        {
+          "id": "t3",
+          "label": "Finish a lesson",
+          "event": "lesson_completed",
+          "target": 1
+        }
+      ]
+    }
+  ],
+  "streakMilestones": [
+    {
+      "days": 3,
+      "xp": 25
+    },
+    {
+      "days": 7,
+      "xp": 75
+    },
+    {
+      "days": 14,
+      "xp": 150
+    },
+    {
+      "days": 30,
+      "xp": 400
+    },
+    {
+      "days": 100,
+      "xp": 1500
+    }
+  ]
+}
