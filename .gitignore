@@ -7,3 +7,8 @@ build/
 .next/
 .env
 *.pyc
+.toolchains/
+__pycache__/
+.venv/
+
+.toolchains/
