@@ -14,6 +14,7 @@ from pydantic import BaseModel
 from pymongo.asynchronous.database import AsyncDatabase
 
 from app.db import collections as c
+from app.repositories.base import clear_catalog_cache
 from app.schemas.gamification import AchievementDef, QuestTemplate
 from app.schemas.learning import Course, CoursePath, Lesson
 from app.schemas.practice import Problem
@@ -64,6 +65,7 @@ async def seed_catalog(db: AsyncDatabase) -> None:
         await db[name].delete_many({})
         if docs:
             await db[name].insert_many(docs)
+    clear_catalog_cache()
 
 
 async def seed_if_empty(db: AsyncDatabase) -> bool:

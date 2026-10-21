@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 
 from app.api.routes import api_router
 from app.core.config import Settings, get_settings
@@ -60,6 +61,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         ),
         lifespan=lifespan,
     )
+    app.add_middleware(GZipMiddleware, minimum_size=1000)  # lesson and course JSON compresses ~10x
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
