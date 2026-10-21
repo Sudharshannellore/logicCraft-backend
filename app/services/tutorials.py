@@ -10,12 +10,13 @@ import logging
 from pydantic import TypeAdapter
 
 from app.core.errors import UnprocessableError
-from app.integrations.tutorials import ReferenceProvider, TutorialProvider
+from app.integrations.tutorials import ImageProvider, ReferenceProvider, TutorialProvider
 from app.integrations.tutorials.base import is_relevant
 from app.repositories.tutorial_cache import TutorialCacheRepository
 from app.schemas.tutorials import (
     ProviderInfo,
     ProviderStatus,
+    TutorialImage,
     TutorialReference,
     TutorialResource,
     TutorialSearchResult,
@@ -24,6 +25,7 @@ from app.schemas.tutorials import (
 logger = logging.getLogger(__name__)
 
 _resources = TypeAdapter(list[TutorialResource])
+_images = TypeAdapter(list[TutorialImage])
 # Interleave kinds so one chatty provider can't crowd out the rest.
 _KIND_ORDER = {"reference": 0, "article": 1, "video": 2, "qa": 3}
 
@@ -110,3 +112,20 @@ class TutorialService:
                 await self.cache.put(key, found.model_dump(mode="json"))
                 return found
         return None
+
+    async def images(self, query: str, language: str | None = None, limit: int = 4) -> list[TutorialImage]:
+        """Pictures that illustrate a concept. Always best-effort: any failure just means no pictures."""
+        key = f"images:{language or '-'}:{limit}:{query.lower()}"
+        cached = await self.cache.get(key)
+        if cached is not None:
+            return _images.validate_python(cached)
+        for provider in (p for p in self.providers if isinstance(p, ImageProvider) and p.enabled):
+            try:
+                found = await asyncio.wait_for(provider.images(query, language, limit), self.timeout_seconds)
+            except Exception as exc:
+                logger.warning("Image provider %s failed for %r: %r", provider.name, query, exc)
+                continue
+            await self.cache.put(key, _images.dump_python(found, mode="json"))
+            if found:
+                return found
+        return []

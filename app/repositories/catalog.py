@@ -3,32 +3,11 @@
 from app.db import collections as c
 from app.repositories.base import CatalogRepository
 from app.schemas.gamification import AchievementDef, QuestTemplate
-from app.schemas.learning import Course, CoursePath, Lesson
 from app.schemas.practice import Problem
 from app.schemas.resumes import ResumeTemplate
 from app.schemas.sql import SqlProblem, SqlTable
 from app.schemas.store import XpPack, XpPlan
 from app.schemas.wallet import StreakMilestone
-
-
-class CourseRepository(CatalogRepository[Course]):
-    collection_name = c.COURSES
-    model = Course
-
-
-class CoursePathRepository(CatalogRepository[CoursePath]):
-    """Documents are keyed by course id."""
-
-    collection_name = c.COURSE_PATHS
-    model = CoursePath
-
-    async def for_course(self, course_id: str) -> CoursePath | None:
-        return await self.find_one({"course_id": course_id})
-
-
-class LessonRepository(CatalogRepository[Lesson]):
-    collection_name = c.LESSONS
-    model = Lesson
 
 
 class ProblemRepository(CatalogRepository[Problem]):

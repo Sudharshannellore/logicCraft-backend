@@ -10,7 +10,7 @@ import asyncio
 import json
 import logging
 import re
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import PurePosixPath
 from typing import Any
 
@@ -23,6 +23,8 @@ logger = logging.getLogger(__name__)
 RAW = "https://raw.githubusercontent.com/exercism/{track}/main/{path}"
 WEBSITE = "https://exercism.org/tracks/{track}/exercises/{slug}"
 TRACK_TTL = 24 * 60 * 60
+CONCEPT_TTL = 7 * 24 * 60 * 60
+CONCEPT_URL = "https://exercism.org/tracks/{track}/concepts/{slug}"
 EXERCISE_TTL = 7 * 24 * 60 * 60
 MAX_FILE_BYTES = 256_000
 # Status values Exercism uses for exercises that aren't ready for learners.
@@ -55,6 +57,31 @@ class ExerciseFiles:
     support: dict[str, str]
     source: str | None
     source_url: str | None
+    # The concept introduction alone (`instructions` also holds the task); empty for most practice exercises.
+    introduction: str = ""
+
+
+@dataclass(frozen=True)
+class SyllabusConceptExercise:
+    slug: str
+    name: str
+    concepts: list[str]
+    prerequisites: list[str]
+
+
+@dataclass(frozen=True)
+class Syllabus:
+    """A track's teaching order: concept exercises (the syllabus proper) and practice exercises by difficulty."""
+
+    concept_exercises: list[SyllabusConceptExercise]
+    practice: list[ExerciseSummary]
+
+
+@dataclass(frozen=True)
+class ConceptDoc:
+    slug: str
+    markdown: str
+    url: str
 
 
 def website_url(track: str, slug: str) -> str:
@@ -101,6 +128,48 @@ class ExercismClient:
             await self.cache.put(key, cached, ttl_seconds=TRACK_TTL)
         return [ExerciseSummary(**e) for e in cached]
 
+    async def syllabus(self, track: str) -> Syllabus:
+        """Concept exercises (with the concepts they teach) plus practice exercises, from `config.json`."""
+        key = f"syllabus:{track}"
+        cached = await self.cache.get(key)
+        if cached is None:
+            text = await self._raw(track, "config.json")
+            if text is None:
+                raise ExercismUnavailable(f"Exercism has no {track} track.")
+            exercises = json.loads(text).get("exercises", {})
+            cached = {
+                "concept_exercises": [
+                    {
+                        "slug": e["slug"],
+                        "name": e.get("name") or e["slug"].replace("-", " ").title(),
+                        "concepts": list(e.get("concepts") or []),
+                        "prerequisites": list(e.get("prerequisites") or []),
+                    }
+                    for e in exercises.get("concept", [])
+                    if e.get("slug") and e.get("status", "active") not in _HIDDEN
+                ],
+                "practice": [asdict(e) for e in await self.exercises(track)],
+            }
+            await self.cache.put(key, cached, ttl_seconds=TRACK_TTL)
+        return Syllabus(
+            concept_exercises=[SyllabusConceptExercise(**e) for e in cached["concept_exercises"]],
+            practice=[ExerciseSummary(**e) for e in cached["practice"]],
+        )
+
+    async def concept_doc(self, track: str, slug: str) -> ConceptDoc | None:
+        """A concept's teaching text: `about.md`, else `introduction.md`. None if the track has neither."""
+        key = f"concept:{track}:{slug}"
+        cached = await self.cache.get(key)
+        if cached is None:
+            cached = {}
+            for name in ("about.md", "introduction.md"):
+                text = await self._raw(track, f"concepts/{slug}/{name}")
+                if text and text.strip():
+                    cached = {"slug": slug, "markdown": text.strip(), "url": CONCEPT_URL.format(track=track, slug=slug)}
+                    break
+            await self.cache.put(key, cached, ttl_seconds=CONCEPT_TTL)
+        return ConceptDoc(**cached) if cached else None
+
     async def exercise(self, track: str, slug: str) -> ExerciseFiles | None:
         key = f"exercise:{track}:{slug}"
         cached = await self.cache.get(key)
@@ -112,9 +181,13 @@ class ExercismClient:
         return ExerciseFiles(**cached)
 
     async def _fetch_exercise(self, track: str, slug: str) -> dict[str, Any] | None:
-        base = f"exercises/practice/{slug}"
-        meta_text = await self._raw(track, f"{base}/.meta/config.json")
-        if meta_text is None:
+        # Concept exercises (the syllabus) live beside the practice exercises.
+        for kind in ("practice", "concept"):
+            base = f"exercises/{kind}/{slug}"
+            meta_text = await self._raw(track, f"{base}/.meta/config.json")
+            if meta_text is not None:
+                break
+        else:
             return None
         meta = json.loads(meta_text)
         files = meta.get("files", {})
@@ -134,7 +207,12 @@ class ExercismClient:
         if track == "sqlite":
             support |= await self._sql_dependencies(track, base, {**solution, **tests, **support})
 
-        name = next((e.name for e in await self.exercises(track) if e.slug == slug), slug.replace("-", " ").title())
+        name = next((e.name for e in await self.exercises(track) if e.slug == slug), None)
+        if name is None:
+            name = next(
+                (e.name for e in (await self.syllabus(track)).concept_exercises if e.slug == slug),
+                slug.replace("-", " ").title(),
+            )
         instructions = "\n\n".join(docs[p].strip() for p in docs_paths if p in docs)
         flat = lambda d: {PurePosixPath(k).name: v for k, v in d.items()}  # noqa: E731
         return {
@@ -147,6 +225,7 @@ class ExercismClient:
             "support": flat(support),
             "source": meta.get("source"),
             "source_url": meta.get("source_url"),
+            "introduction": docs.get(".docs/introduction.md", "").strip(),
         }
 
     async def _sql_dependencies(self, track: str, base: str, known: dict[str, str]) -> dict[str, str]:

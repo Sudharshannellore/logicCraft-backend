@@ -1,9 +1,6 @@
 """Every MongoDB collection the app uses, in one place."""
 
 # Catalog — read-only content, (re)loaded by the seeder.
-COURSES = "courses"
-COURSE_PATHS = "course_paths"
-LESSONS = "lessons"
 PROBLEMS = "problems"
 SQL_TABLES = "sql_tables"
 SQL_PROBLEMS = "sql_problems"
@@ -15,9 +12,6 @@ XP_PACKS = "xp_packs"
 STREAK_MILESTONES = "streak_milestones"
 
 CATALOG = (
-    COURSES,
-    COURSE_PATHS,
-    LESSONS,
     PROBLEMS,
     SQL_TABLES,
     SQL_PROBLEMS,
@@ -28,6 +22,9 @@ CATALOG = (
     XP_PACKS,
     STREAK_MILESTONES,
 )
+
+# Collections of retired features; the seeder drops them so old databases don't carry dead data.
+LEGACY = ("courses", "course_paths", "lessons")
 
 # Player state.
 USERS = "users"
@@ -43,6 +40,8 @@ PURCHASES = "purchases"
 RESUMES = "resumes"
 JOB_APPLICATIONS = "job_applications"
 SUBMISSIONS = "submissions"
+PATH_ENROLLMENTS = "path_enrollments"
+QUIZ_ATTEMPTS = "quiz_attempts"
 
 # Auth.
 REFRESH_TOKENS = "refresh_tokens"

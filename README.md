@@ -19,8 +19,8 @@ cp .env.example .env
 ```
 
 - Interactive docs: http://localhost:8000/docs
-- On first start an empty database gets the catalog (courses, problems, quests, plans). There is no demo data: every player comes from a real sign-up.
-- `python -m app.seed` reloads catalog content after editing `app/seed/data`; `python -m app.seed --reset` also deletes every player and their data.
+- On first start an empty database gets the catalog (problems, quests, plans; courses are live, not seeded). There is no demo data: every player comes from a real sign-up.
+- `python -m app.seed` reloads catalog content after editing `app/seed/data` (it also drops the retired course collections); `python -m app.seed --reset` also deletes every player and their data.
 - Tests: `.venv/Scripts/python -m pytest` (integration tests use a throwaway `codequest_test` database and skip themselves when MongoDB isn't running). Lint: `ruff check app tests`.
 
 ## Authentication
@@ -67,7 +67,7 @@ app/
 │   ├── container.py     composition root: builds services lazily per request
 │   ├── deps.py          `Services` and `CurrentUser` dependencies
 │   └── routes/          thin routers: parse → one service call → response model
-└── seed/                catalog fixtures, one module per course (data/courses/)
+└── seed/                catalog fixtures (problems, quests, plans)
 ```
 
 Dependencies point inward: `routes → services → repositories/integrations → schemas`, and `domain`
@@ -108,15 +108,66 @@ To add a platform, subclass `TutorialProvider` in `app/integrations/tutorials/` 
 
 ## Courses
 
-13 worlds, one per industry-standard language: Python, JavaScript, SQL, TypeScript, Java, C#, C++, C, PHP,
-Go, Rust, Kotlin and Swift. Each course is a single module in `app/seed/data/courses/` holding the course,
-its world map (`ZONES`) and its lessons; `COURSE_ORDER` in that package sets the order learners see.
+13 worlds, one per language: Python, JavaScript, SQL, TypeScript, Java, C#, C++, C, PHP, Go, Rust, Kotlin and
+Swift. Every language in `app/domain/languages.py` gets a **live course** (`live-<language>`), built on demand from its Exercism track's `config.json`. Nothing is stored or seeded:
 
-To add a course: copy an existing module, give every id a new prefix, add the module name to
-`COURSE_ORDER`, and add the language to `app/domain/languages.py` (how Stack Overflow, DEV, YouTube and
-Wikipedia name it). Then run `pytest tests/unit/test_course_content.py` and `python -m app.seed`.
-The loader derives totals and counts and rejects broken references (a topic without a lesson, a lesson
-in an unknown module, an id used twice), so mistakes fail the seed rather than reaching learners.
+- **Map:** the track's concept exercises in prerequisite order, then practice exercises spread from easy to
+  hard, up to 32 topics in zones of four, each guarded by a boss (the existing zone-boss challenges). Tracks
+  with no syllabus (C, SQL) are taught through practice exercises alone. See `app/domain/live_courses.py`.
+- **Lesson:** the concept doc as Markdown (`liveContent`, with its source link) and the exercise to solve
+  (`exercise`), graded through the practice library endpoints where the language is gradable. There are no
+  hand-written quizzes: the exercise's own tests are the check.
+- **Freshness:** the syllabus is cached in Mongo for a day and the built course in memory for 5 minutes; if
+  Exercism is down, the course list is empty until it's back.
+
+To add a language, add one `LanguageInfo` line (with its Exercism track); its live course appears by itself.
+
+### Framework courses
+
+Beside the 13 language courses there are framework courses (`fw-<name>`, `kind: "framework"`): React, Next.js,
+Svelte, Express, FastAPI, Laravel, Hugging Face Transformers, scikit-learn, pandas / data science and
+generative AI. Each is built live from the project's own open-source docs on GitHub (MIT, Apache-2.0 or CC BY),
+and each lesson credits its source and licence.
+
+- **A framework is a recipe, not content.** `app/domain/docs_courses.py` holds one `DocsCourseSpec` per course: the
+  repository, where the pages are, and how their order is known (a navigation file, numbered folders, or a short
+  list). To add a framework, add one spec; the course appears by itself. `app/services/docs_courses.py` reads the
+  repository, `app/domain/docs_markdown.py` turns MDX / MkDocs / VitePress pages into plain Markdown (callouts kept,
+  components dropped, code never touched, images served from jsDelivr).
+- **Same map and rules as a language course:** zones follow the docs' sections, with a boss per zone (the boss
+  rounds are exercises in the framework's language) and XP per topic. Lessons have no graded exercise.
+- **GitHub limits:** listing a repository uses GitHub's API (60 requests/hour without a token). Listings are cached
+  for a day and the last good copy is kept for a month if GitHub can't be reached. Set `GITHUB_TOKEN` (any token
+  with no scopes) for 5,000/hour.
+
+### Framework practice and challenges
+
+A framework can't be graded like a language's exercises (there is no React or FastAPI to run), so it is practised
+and fought with **quizzes made from its own docs** (`app/domain/framework_quiz.py`, no AI): a sentence from a lesson
+with one key term (`inline code` or **bold**) blanked out, and four options. The wrong options are other terms of
+the same sort from the same material (a command among commands, a file among files); sentences that lean on unseen
+text, labels and ambiguous sentences are skipped. The same page always gives the same questions.
+
+- **Practice:** one quiz per lesson, untimed, retake any time. Pass at 70% to earn XP, once per lesson.
+- **Daily quiz:** 5 questions across the framework, the same for everyone, 8 minutes, one run per UTC day, +100 XP.
+- **Zone boss:** 6 questions on the zone's lessons, 12 minutes, retryable with fresh questions each run. Passing
+  defeats the boss and opens the next zone. A zone with too little material is topped up from the rest of the
+  framework; if there's still too little, the boss can be claimed without a fight and without XP.
+
+Endpoints: `GET /frameworks`, `/frameworks/{course}/practice`, `/frameworks/{course}/challenges`,
+`/quizzes/{id}` and `POST /quizzes/{id}/start | submit | claim`. Quiz ids: `fwq-practice-<lesson>`,
+`fwq-daily-<yyyymmdd>-<course>`, `fwq-zone-<boss>`. Language courses are unchanged (Exercism exercises and bosses).
+
+### Career paths
+
+`GET /paths` lists industry routes (Full-Stack Web, Frontend, Backend (Node / Python / PHP), AI / ML, Data
+Science, Systems, Enterprise, Mobile). Each is an ordered list of courses in `app/domain/career_paths.py`.
+
+- A path's progress is read from its courses, so finishing a course anywhere counts in every path that contains it.
+  Steps are `completed`, `in_progress`, `next` or `available`; nothing is locked, so learners can start any course.
+- A path is suggested (`recommended`, with a `reason`) once the learner has finished or started a course in it:
+  finish Python and the backend, AI and data paths come first.
+- `PUT /paths/{id}/enroll` and `DELETE /paths/{id}/enroll` choose or leave a path (the only thing stored).
 
 ## Practice library (live exercises)
 
@@ -246,6 +297,8 @@ All paths are under `/api/v1`.
 | Landing (activity ticker) | `GET /activity` |
 | Dashboard | `GET /users/me`, `/wallet`, `/quests/daily`, `/courses`, `/leaderboard` |
 | Learn, Course | `GET /courses`, `/courses/{id}`, `/courses/{id}/path` |
+| Framework practice | `GET /frameworks`, `/frameworks/{course}/practice`, `/frameworks/{course}/challenges`; `/quizzes/{id}` (+ `start`, `submit`, `claim`) |
+| Career paths | `GET /paths`, `/paths/{id}`; `PUT` / `DELETE /paths/{id}/enroll` |
 | Lesson | `GET /lessons/{id}`, `/lessons/{id}/resources`, `POST /lessons/{id}/try-it`, `/quiz`, `/complete` |
 | Practice library, exercise board | `GET /library/languages`, `/library/{language}/exercises[/{slug}]`, `POST …/run`, `…/submit` |
 | Practice originals, Code board | `GET /problems`, `/problems/{slug}`, `POST /problems/{slug}/run`, `/submit` (optional `duelId`) |

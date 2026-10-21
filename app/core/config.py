@@ -32,6 +32,8 @@ class Settings(BaseSettings):
     http_user_agent: str = "Logicraft/0.1 (learning platform; contact: dev@logicraft.local)"
     tutorial_cache_ttl_seconds: int = 12 * 60 * 60
     stackexchange_key: str = ""
+    # Optional: raises GitHub's API limit from 60 to 5,000 requests/hour (framework courses list docs repositories).
+    github_token: str = ""
     youtube_api_key: str = ""
 
     code_executor: Literal["local", "disabled"] = "local"

@@ -1,5 +1,5 @@
 from app.core.config import Settings
-from app.integrations.tutorials.base import ReferenceProvider, TutorialProvider
+from app.integrations.tutorials.base import ImageProvider, ReferenceProvider, TutorialProvider
 from app.integrations.tutorials.devto import DevToProvider
 from app.integrations.tutorials.mdn import MdnProvider
 from app.integrations.tutorials.stackexchange import StackExchangeProvider
@@ -18,4 +18,4 @@ def build_providers(http, settings: Settings) -> list[TutorialProvider]:
     ]
 
 
-__all__ = ["ReferenceProvider", "TutorialProvider", "build_providers"]
+__all__ = ["ImageProvider", "ReferenceProvider", "TutorialProvider", "build_providers"]

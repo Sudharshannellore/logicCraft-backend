@@ -1,15 +1,23 @@
+import re
 from urllib.parse import quote
 
 from app.domain.languages import language as language_info
 from app.domain.languages import names_other_language
-from app.integrations.tutorials.base import ReferenceProvider, TutorialProvider
-from app.schemas.tutorials import TutorialReference, TutorialResource
+from app.integrations.tutorials.base import ImageProvider, ReferenceProvider, TutorialProvider, is_relevant, keywords
+from app.schemas.tutorials import TutorialImage, TutorialReference, TutorialResource
 
 SEARCH = "https://en.wikipedia.org/w/rest.php/v1/search/page"
 SUMMARY = "https://en.wikipedia.org/api/rest_v1/page/summary/{key}"
+MEDIA = "https://en.wikipedia.org/api/rest_v1/page/media-list/{key}"
+# Site furniture that appears on many pages: logos, status icons, flags, audio.
+_NOT_AN_ILLUSTRATION = re.compile(
+    r"logo|icon|symbol|flag|commons|wiki|question[_ ]book|ambox|edit-|padlock|disambig|portal|nuvola|"
+    r"increase|decrease|\.(ogg|oga|mp3|webm|ogv)$",
+    re.I,
+)
 
 
-class WikipediaProvider(TutorialProvider, ReferenceProvider):
+class WikipediaProvider(TutorialProvider, ReferenceProvider, ImageProvider):
     """Wikipedia's REST API: computer-science background for a concept. Free, no key (User-Agent required)."""
 
     name = "wikipedia"
@@ -52,6 +60,37 @@ class WikipediaProvider(TutorialProvider, ReferenceProvider):
                     thumbnail_url=(data.get("thumbnail") or {}).get("source"),
                 )
         return None
+
+    async def images(self, query: str, language: str | None, limit: int) -> list[TutorialImage]:
+        """Diagrams from the best-matching article (e.g. "Linked list" → its node diagrams)."""
+        if not keywords(query):  # "Basics" alone would match any article
+            return []
+        for page in await self._search(query, language, 3):
+            if not is_relevant(query, page.get("title"), page.get("description")):
+                continue
+            response = await self.http.get(MEDIA.format(key=quote(page["key"], safe="")))
+            if response.status_code == 404:
+                continue
+            response.raise_for_status()
+            found = []
+            for item in response.json().get("items", []):
+                srcset = item.get("srcset") or []
+                if item.get("type") != "image" or not item.get("showInGallery") or not srcset:
+                    continue
+                if _NOT_AN_ILLUSTRATION.search(item.get("title", "")):
+                    continue
+                src = srcset[-1]["src"]  # the largest rendition on offer
+                found.append(
+                    TutorialImage(
+                        url="https:" + src if src.startswith("//") else src,
+                        caption=((item.get("caption") or {}).get("text") or "").strip() or None,
+                        source_url="https://en.wikipedia.org/wiki/" + quote(item["title"], safe=":"),
+                        provider=self.name,
+                    )
+                )
+            if found:
+                return found[:limit]
+        return []
 
     async def search(self, query: str, language: str | None, limit: int) -> list[TutorialResource]:
         return [

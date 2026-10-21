@@ -60,6 +60,8 @@ async def ensure_indexes(db: AsyncDatabase, *, tutorial_cache_ttl_seconds: int, 
             IndexModel([("opponent_id", ASCENDING), ("created_at", DESCENDING)]),
         ]
     )
+    await db[c.QUIZ_ATTEMPTS].create_indexes([IndexModel([("user_id", ASCENDING), ("course_id", ASCENDING)])])
+    await db[c.PATH_ENROLLMENTS].create_indexes([IndexModel([("user_id", ASCENDING)])])
     await db[c.PURCHASES].create_indexes([IndexModel([("user_id", ASCENDING), ("at", DESCENDING)])])
     await db[c.RESUMES].create_indexes([IndexModel([("user_id", ASCENDING), ("created_at", ASCENDING)])])
     await db[c.JOB_APPLICATIONS].create_indexes([IndexModel([("user_id", ASCENDING), ("applied_at", DESCENDING)])])

@@ -1,4 +1,4 @@
-"""Loads catalog content (courses, problems, quests, plans…) into MongoDB.
+"""Loads catalog content (problems, quests, plans…) into MongoDB. Courses are not here: they are live.
 
 Catalog collections are validated through the API models, then replaced wholesale, so
 re-seeding picks up content edits. There is no demo data: players and everything they do
@@ -16,13 +16,11 @@ from pymongo.asynchronous.database import AsyncDatabase
 from app.db import collections as c
 from app.repositories.base import clear_catalog_cache
 from app.schemas.gamification import AchievementDef, QuestTemplate
-from app.schemas.learning import Course, CoursePath, Lesson
 from app.schemas.practice import Problem
 from app.schemas.resumes import ResumeTemplate
 from app.schemas.sql import SqlProblem, SqlTable
 from app.schemas.store import XpPack, XpPlan
 from app.schemas.wallet import StreakMilestone
-from app.seed.courses import load_courses
 
 logger = logging.getLogger(__name__)
 DATA = Path(__file__).parent / "data"
@@ -43,11 +41,7 @@ def _catalog_docs(model: type[BaseModel], items: list[dict], key: str = "id") ->
 
 def catalog() -> dict[str, list[dict]]:
     problems, sql, game, store = (_load(n) for n in ("problems", "sql", "gamification", "store"))
-    courses = load_courses()
     return {
-        c.COURSES: _catalog_docs(Course, courses.courses),
-        c.COURSE_PATHS: _catalog_docs(CoursePath, courses.paths, key="course_id"),
-        c.LESSONS: _catalog_docs(Lesson, courses.lessons),
         c.PROBLEMS: _catalog_docs(Problem, problems["problems"]),
         c.SQL_TABLES: _catalog_docs(SqlTable, sql["tables"], key="name"),
         c.SQL_PROBLEMS: _catalog_docs(SqlProblem, sql["problems"]),
@@ -61,6 +55,8 @@ def catalog() -> dict[str, list[dict]]:
 
 
 async def seed_catalog(db: AsyncDatabase) -> None:
+    for name in c.LEGACY:
+        await db[name].drop()
     for name, docs in catalog().items():
         await db[name].delete_many({})
         if docs:
@@ -70,7 +66,7 @@ async def seed_catalog(db: AsyncDatabase) -> None:
 
 async def seed_if_empty(db: AsyncDatabase) -> bool:
     """Loads the catalog on first start. Returns True when it did. Players only come from real sign-ups."""
-    if await db[c.COURSES].estimated_document_count() > 0:
+    if await db[c.PROBLEMS].estimated_document_count() > 0:
         return False
     await seed_catalog(db)
     return True

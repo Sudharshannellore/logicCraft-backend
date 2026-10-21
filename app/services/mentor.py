@@ -29,10 +29,7 @@ class MentorService:
                 title=lesson.title,
                 concept=lesson.concept,
                 explanation=lesson.explanation,
-                analogy=lesson.analogy,
-                key_points=lesson.key_points or [],
                 step=ref.step,
-                try_hint=" Then: ".join(c.hint for c in lesson.try_it.checks) if lesson.try_it else None,
             )
         problem = await self.problems.by_slug(ref.problem_slug)
         if not problem:

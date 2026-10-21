@@ -1,7 +1,7 @@
-from pydantic import Field
+from typing import Literal
 
 from app.schemas.common import CamelModel, Difficulty, NodeState, XpBalance
-from app.schemas.tutorials import TutorialReference, TutorialResource
+from app.schemas.tutorials import TutorialImage, TutorialReference, TutorialResource
 
 # --- Courses & world map ---------------------------------------------------------
 
@@ -25,6 +25,8 @@ class Course(CamelModel):
     progress_percent: int = 0
     total_xp: int
     modules: list[CourseModule]
+    # "language" = Exercism-based course in a language; "framework" = built from a framework's open-source docs.
+    kind: Literal["language", "framework"] = "language"
 
 
 class PathNode(CamelModel):
@@ -67,23 +69,14 @@ class CoursePath(CamelModel):
 # --- Lessons -------------------------------------------------------------------------
 
 
-class Quiz(CamelModel):
-    question: str
-    options: list[str] = Field(min_length=2)
-    correct_index: int
-    explanation: str | None = None
+class LessonExercise(CamelModel):
+    """The graded exercise a live lesson ends with; solve it through the practice library endpoints."""
 
-
-class TryItCheck(CamelModel):
-    pattern: str
-    hint: str
-
-
-class TryIt(CamelModel):
-    prompt: str
-    starter_code: str
-    checks: list[TryItCheck]
-    expected_output: str
+    language: str
+    slug: str
+    name: str
+    url: str
+    gradable: bool
 
 
 class Lesson(CamelModel):
@@ -93,16 +86,14 @@ class Lesson(CamelModel):
     title: str
     concept: str
     explanation: str
-    code_example: str
-    quiz: Quiz
+    code_example: str = ""
     xp: int | None = None
     estimated_minutes: int | None = None
-    key_points: list[str] | None = None
-    analogy: str | None = None
-    code_walkthrough: list[str] | None = None
-    try_it: TryIt | None = None
-    # "curated" = written by the team; "generated" = assembled from external references.
-    source: str = "curated"
+    # Teaching text pulled live from an open-source syllabus (Markdown), with where it came from.
+    live_content: str | None = None
+    live_source_name: str | None = None
+    live_source_url: str | None = None
+    exercise: LessonExercise | None = None
     completed: bool = False
 
 
@@ -110,26 +101,7 @@ class LessonResources(CamelModel):
     lesson_id: str
     reference: TutorialReference | None
     resources: list[TutorialResource]
-
-
-class TryItRequest(CamelModel):
-    code: str = Field(max_length=20_000)
-
-
-class TryItResult(CamelModel):
-    passed: bool
-    hints: list[str]
-    expected_output: str
-
-
-class QuizAnswerRequest(CamelModel):
-    answer_index: int = Field(ge=0)
-
-
-class QuizAnswerResult(CamelModel):
-    correct: bool
-    correct_index: int
-    explanation: str | None
+    images: list[TutorialImage] = []
 
 
 class LessonCompletion(CamelModel):

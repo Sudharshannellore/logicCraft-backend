@@ -197,6 +197,8 @@ class ChallengeService:
 
     async def _zone(self, user_id: str, course_id: str, boss_id: str) -> _Spec:
         course = await self.learning.get_course(user_id, course_id)
+        if course.kind == "framework":
+            raise ConflictError("A framework's boss is a quiz on its docs: fight it from the quiz page.")
         zone = next((z for z in await self.learning.course_path(user_id, course_id) if z.boss.id == boss_id), None)
         if not zone:
             raise NotFoundError("Boss not found on this map.")

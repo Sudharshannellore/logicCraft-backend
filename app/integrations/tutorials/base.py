@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 
 import httpx
 
-from app.schemas.tutorials import ResourceKind, TutorialReference, TutorialResource
+from app.schemas.tutorials import ResourceKind, TutorialImage, TutorialReference, TutorialResource
 
 _WORD = re.compile(r"[a-z0-9+#]+")
 _STOPWORDS = {"a", "an", "and", "the", "of", "in", "to", "with", "for", "on", "how", "what", "is", "basics"}
@@ -77,3 +77,10 @@ class ReferenceProvider(ABC):
 
     @abstractmethod
     async def lookup(self, query: str, language: str | None) -> TutorialReference | None: ...
+
+
+class ImageProvider(ABC):
+    """A platform that can illustrate a concept with freely licensed images."""
+
+    @abstractmethod
+    async def images(self, query: str, language: str | None, limit: int) -> list[TutorialImage]: ...

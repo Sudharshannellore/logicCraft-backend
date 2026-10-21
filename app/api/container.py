@@ -11,6 +11,7 @@ from pymongo.asynchronous.database import AsyncDatabase
 
 from app.core.config import Settings
 from app.integrations.execution import CodeExecutor
+from app.integrations.docs import DocsClient
 from app.integrations.exercism.client import ExercismClient
 from app.integrations.jobs.boards import build_boards
 from app.integrations.tutorials import TutorialProvider
@@ -20,6 +21,8 @@ from app.repositories.challenges import ChallengeAttemptRepository
 from app.repositories.exercism_cache import ExercismCacheRepository
 from app.repositories.jobs import JobFeedRepository, JobListingRepository
 from app.repositories.ledger import LedgerRepository
+from app.repositories.framework_quiz import QuizAttemptRepository
+from app.repositories.paths import PathEnrollmentRepository
 from app.repositories.player_content import (
     JobApplicationRepository,
     PurchaseRepository,
@@ -35,10 +38,14 @@ from app.services.achievements import AchievementService
 from app.services.auth import AuthService
 from app.services.challenges import ChallengeService
 from app.services.jobs import JobService, ResumeAIService
+from app.services.framework_quiz import FrameworkQuizService
 from app.services.leaderboard import LeaderboardService
 from app.services.learning import LearningService
+from app.services.docs_courses import DocsCourseService
+from app.services.live_courses import LiveCourseService
 from app.services.library import LibraryService
 from app.services.mentor import MentorService
+from app.services.paths import PathService
 from app.services.practice import PracticeService
 from app.services.quests import ProgressTracker, QuestService
 from app.services.resumes import ResumeService
@@ -84,10 +91,6 @@ class Container:
     @cached_property
     def problem_repo(self) -> catalog.ProblemRepository:
         return catalog.ProblemRepository(self.db)
-
-    @cached_property
-    def lesson_repo(self) -> catalog.LessonRepository:
-        return catalog.LessonRepository(self.db)
 
     @cached_property
     def submission_repo(self) -> SubmissionRepository:
@@ -140,6 +143,10 @@ class Container:
         return ExercismClient(self.http, self.exercism_cache)
 
     @cached_property
+    def docs_courses(self) -> DocsCourseService:
+        return DocsCourseService(DocsClient(self.http, self.exercism_cache, self.settings.github_token))
+
+    @cached_property
     def library(self) -> LibraryService:
         return LibraryService(
             self.exercism,
@@ -160,15 +167,28 @@ class Container:
     @cached_property
     def learning(self) -> LearningService:
         return LearningService(
-            catalog.CourseRepository(self.db),
-            catalog.CoursePathRepository(self.db),
-            self.lesson_repo,
             CourseProgressRepository(self.db),
             self.user_repo,
             self.wallet,
             self.tracker,
             self.tutorials,
+            LiveCourseService(self.exercism, self.library.gradable, self.docs_courses),
         )
+
+    @cached_property
+    def framework_quiz(self) -> FrameworkQuizService:
+        return FrameworkQuizService(
+            self.learning,
+            QuizAttemptRepository(self.db),
+            self.exercism_cache,
+            self.wallet,
+            self.tracker,
+            self.user_repo,
+        )
+
+    @cached_property
+    def paths(self) -> PathService:
+        return PathService(self.learning, PathEnrollmentRepository(self.db))
 
     @cached_property
     def mentor(self) -> MentorService:

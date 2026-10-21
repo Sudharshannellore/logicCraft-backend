@@ -34,6 +34,15 @@ class TutorialReference(CamelModel):
     thumbnail_url: str | None = None
 
 
+class TutorialImage(CamelModel):
+    """A diagram or picture that illustrates a concept, with where it came from (credit and licence live there)."""
+
+    url: str
+    caption: str | None = None
+    source_url: str
+    provider: str
+
+
 class ProviderStatus(CamelModel):
     name: str
     ok: bool

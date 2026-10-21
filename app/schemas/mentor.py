@@ -20,7 +20,7 @@ class ProblemContextRef(CamelModel):
 class LessonContextRef(CamelModel):
     kind: Literal["lesson"]
     lesson_id: str
-    # Current lesson step, e.g. "concept", "tryit", "quiz".
+    # Current lesson step, e.g. "concept", "code", "exercise".
     step: str | None = None
 
 

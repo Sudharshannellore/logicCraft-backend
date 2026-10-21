@@ -5,7 +5,7 @@ when swapping in a real LLM.
 """
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
@@ -22,10 +22,7 @@ class LessonContext:
     title: str
     concept: str
     explanation: str
-    analogy: str | None = None
-    key_points: list[str] = field(default_factory=list)
     step: str | None = None
-    try_hint: str | None = None
 
 
 MentorContext = ProblemContext | LessonContext
@@ -47,8 +44,7 @@ def suggested_questions(ctx: MentorContext) -> list[str]:
         ]
     c = ctx.concept.lower()
     return [
-        *(["Give me a hint for the Try it exercise"] if ctx.step == "tryit" else []),
-        *(["Help me think through the quiz"] if ctx.step == "quiz" else []),
+        *(["Give me a hint for the exercise"] if ctx.step == "exercise" else []),
         f"Explain {c} in simpler words",
         f"Show me a real-world example of {c}",
         "How does the code example work?",
@@ -180,17 +176,9 @@ def mentor_reply(question: str, ctx: MentorContext, turn: int = 0) -> str:
         return f"Good question. For {ctx.title}, {idea}. Ask me for a hint if you want a nudge."
 
     c = ctx.concept.lower()
-    if _has(q, "try it", "exercise", "hint"):
-        return (
-            ctx.try_hint
-            or "Re-read the step's instructions, then change one line at a time and run it to see what happens."
-        )
-    if _has(q, "quiz"):
-        first_point = ctx.key_points[0] if ctx.key_points else ""
-        return f"Don't guess — rule options out. Which ones contradict what you just learned about {c}? {first_point}".strip()
+    if _has(q, "exercise", "hint"):
+        return "Re-read the exercise's instructions, then change one line at a time and run the tests to see what happens."
     if _has(q, "real", "world", "example"):
-        if ctx.analogy:
-            return f"Think of it like this: {ctx.analogy}"
         return f"Apps use {c} all the time — caches, search, and settings lookups are common places to find it."
     if _has(q, "code", "work", "line"):
         return (
@@ -198,20 +186,18 @@ def mentor_reply(question: str, ctx: MentorContext, turn: int = 0) -> str:
             f"output before running again — that's the fastest way to really get {c}."
         )
     if _has(q, "mistake", "wrong", "avoid", "pitfall"):
-        if ctx.key_points:
-            return f"Most mistakes come from forgetting: {' · '.join(ctx.key_points[:2])}."
         return (
             f"The usual mistakes are using {c} where a simpler tool would do, and not testing the empty or edge case."
         )
     if _has(q, "when", "use", "why"):
-        return f"Reach for {c} when it makes the job simpler or faster. {ctx.key_points[0] if ctx.key_points else ctx.explanation}"
+        return f"Reach for {c} when it makes the job simpler or faster. {ctx.explanation}"
     if _has(q, "complex", "big o", "fast", "slow"):
         return (
-            f"Ask how many steps the operation takes as the input grows. For {c}, the lesson's key points show where "
+            f"Ask how many steps the operation takes as the input grows. For {c}, the lesson's text shows where "
             "it's fast — and where it isn't."
         )
     if _has(q, "next", "after", "learn"):
         return (
-            f"Finish this lesson's quiz, then follow the next node on your course roadmap — it builds directly on {c}."
+            f"Finish this lesson's exercise, then follow the next node on your course roadmap — it builds directly on {c}."
         )
-    return f"Here's another angle on {c}: {ctx.analogy or ctx.explanation}"
+    return f"Here's another angle on {c}: {ctx.explanation}"

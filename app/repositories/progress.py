@@ -22,6 +22,16 @@ class CourseProgressRepository(Repository):
             "defeated_bosses": (doc or {}).get("defeated_bosses", []),
         }
 
+    async def for_user(self, user_id: str) -> dict[str, dict[str, list[str]]]:
+        """Every course the player has touched: {course_id: {completed_nodes, defeated_bosses}}."""
+        return {
+            d["course_id"]: {
+                "completed_nodes": d.get("completed_nodes", []),
+                "defeated_bosses": d.get("defeated_bosses", []),
+            }
+            async for d in self.col.find({"user_id": user_id})
+        }
+
     async def add(
         self, user_id: str, course_id: str, *, node_id: str | None = None, boss_id: str | None = None
     ) -> None:
