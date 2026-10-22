@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Query
 
 from app.api.deps import CurrentUser, Services
@@ -5,6 +7,8 @@ from app.schemas.challenges import ChallengeSubmission, ChallengeSubmitResult, L
 from app.schemas.learning import LessonCompletion
 
 router = APIRouter(tags=["challenges"])
+
+Language = Annotated[str, Query(max_length=20, pattern="^[a-z]+$")]
 
 
 @router.get(
@@ -18,19 +22,23 @@ async def list_challenges(
     return await services.challenges.board(user_id, language)
 
 
-@router.get("/challenges/{challenge_id}", response_model=LiveChallenge)
-async def get_challenge(challenge_id: str, user_id: CurrentUser, services: Services):
-    return await services.challenges.get(user_id, challenge_id)
+@router.get(
+    "/challenges/{challenge_id}",
+    response_model=LiveChallenge,
+    summary="One challenge, with its exercises in the chosen language (the challenge is the same in every language)",
+)
+async def get_challenge(challenge_id: str, user_id: CurrentUser, services: Services, language: Language = "python"):
+    return await services.challenges.get(user_id, challenge_id, language)
 
 
 @router.post("/challenges/{challenge_id}/start", response_model=LiveChallenge, summary="Start (or restart) your clock")
-async def start_challenge(challenge_id: str, user_id: CurrentUser, services: Services):
-    return await services.challenges.start(user_id, challenge_id)
+async def start_challenge(challenge_id: str, user_id: CurrentUser, services: Services, language: Language = "python"):
+    return await services.challenges.start(user_id, challenge_id, language)
 
 
 @router.post("/challenges/{challenge_id}/submit", response_model=ChallengeSubmitResult)
 async def submit_challenge(challenge_id: str, body: ChallengeSubmission, user_id: CurrentUser, services: Services):
-    return await services.challenges.submit(user_id, challenge_id, body.slug, body.files)
+    return await services.challenges.submit(user_id, challenge_id, body.slug, body.files, body.language)
 
 
 # --- Zone bosses on a course map -------------------------------------------------------------------

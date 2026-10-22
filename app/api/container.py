@@ -258,6 +258,7 @@ class Container:
             SubscriptionRepository(self.db),
             PurchaseRepository(self.db),
             self.wallet,
+            demo_checkout=self.settings.demo_checkout,
         )
 
     @cached_property

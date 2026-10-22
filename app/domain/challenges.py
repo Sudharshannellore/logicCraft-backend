@@ -1,8 +1,8 @@
 """Live challenge rules: which Exercism exercises are today's Daily, Speed and weekly Boss challenges.
 
 Challenges rotate on a fixed UTC schedule — Daily and Speed at 00:00 UTC, the Boss every Monday — and
-are picked deterministically from the language's live Exercism track, so every player gets the same
-challenge without anything being stored ahead of time.
+are picked deterministically from the exercises every language's Exercism track has in common, so every
+player gets the same challenge in whichever language they solve it, without anything being stored ahead of time.
 """
 
 import hashlib
@@ -112,25 +112,26 @@ def period_bounds(kind: ChallengeKind, period: str) -> tuple[datetime, datetime]
     return begins, begins + length
 
 
-_ID = re.compile(r"^(daily|speed)-(\d{4}-\d{2}-\d{2})-([a-z]+)$|^(boss)-(\d{4}-W\d{2})-([a-z]+)$")
+# A challenge is the same in every language, so its id has none. Ids that still end in a language
+# ("daily-2026-10-20-python", from before) are accepted and mean the same challenge.
+_ID = re.compile(r"^(?:(daily|speed)-(\d{4}-\d{2}-\d{2})|(boss)-(\d{4}-W\d{2}))(?:-[a-z]+)?$")
 
 
-def challenge_id(kind: ChallengeKind, period: str, language: str) -> str:
-    return f"{kind}-{period}-{language}"
+def challenge_id(kind: ChallengeKind, period: str) -> str:
+    return f"{kind}-{period}"
 
 
-def parse_id(value: str) -> tuple[ChallengeKind, str, str] | None:
-    """(kind, period, language) for a well-formed challenge id, else None."""
+def parse_id(value: str) -> tuple[ChallengeKind, str] | None:
+    """(kind, period) for a well-formed challenge id, else None."""
     match = _ID.match(value)
     if not match:
         return None
-    groups = [g for g in match.groups() if g is not None]
-    kind, period, language = groups
+    kind, period = [g for g in match.groups() if g is not None]
     try:
         period_bounds(kind, period)  # type: ignore[arg-type]
     except ValueError:
         return None
-    return kind, period, language  # type: ignore[return-value]
+    return kind, period  # type: ignore[return-value]
 
 
 def _rank(seed: str, slug: str) -> str:

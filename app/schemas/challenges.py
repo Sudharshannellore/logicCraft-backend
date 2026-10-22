@@ -76,6 +76,8 @@ class LiveChallenge(CamelModel):
 
 class ChallengeSubmission(CamelModel):
     slug: str = Field(min_length=1, max_length=100)
+    # The language the solution is written in; the challenge itself is the same in all of them.
+    language: str = Field("python", max_length=20, pattern="^[a-z]+$")
     # name -> content; only the exercise's own solution files are used.
     files: dict[str, str] = Field(min_length=1)
 

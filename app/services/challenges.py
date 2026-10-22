@@ -1,7 +1,9 @@
 """Live challenges built from Exercism, for all 13 course languages.
 
 - Daily Challenge, Speed Round and Weekly Boss rotate on a UTC schedule (see app/domain/challenges.py).
-  Every player gets the same exercises; times are measured on the server from when the player starts.
+  Every player gets the same exercises, in whichever language they choose: they are picked from the
+  exercises that every track has, so switching language never changes the challenge, its clock or its
+  bonus. Times are measured on the server from when the player starts.
 - Zone bosses guard the gates on each course map: a few exercises in the course's language at the
   zone's level. Beating one opens the next zone.
 
@@ -46,6 +48,10 @@ from app.services.learning import LearningService
 from app.services.library import LibraryService, difficulty_for
 from app.services.quests import ProgressTracker
 from app.services.wallet import WalletService
+
+# The languages a Daily, Speed or Boss challenge can be solved in. SQL's track teaches a different
+# syllabus, so none of its exercises exist elsewhere.
+SHARED_LANGUAGES = tuple(lang for lang in LANGUAGES.values() if lang.id != "sql")
 
 # How many shortlisted exercises to test-run before settling on one.
 MAX_CHECKS = 6
@@ -120,6 +126,45 @@ class ChallengeService:
             await self.cache.put(key, verdict, ttl_seconds=CHECK_TTL)
         return bool(verdict)
 
+    async def _pick(
+        self, candidates: list[Candidate], seed: str, bands: tuple[tuple[int, int], ...], works
+    ) -> list[str]:
+        """One slug per level band: the first shortlisted exercise that `works`, else the first shortlisted."""
+        chosen: list[str] = []
+        for i, band in enumerate(bands):
+            order = shortlist(candidates, f"{seed}#{i}", band, exclude=set(chosen))
+            pick = None
+            for slug in order[:MAX_CHECKS]:
+                if await works(slug):
+                    pick = slug
+                    break
+            if pick or order:
+                chosen.append(pick or order[0])
+        return chosen
+
+    async def _shared_slugs(self, key: str, bands: tuple[tuple[int, int], ...], ttl: int) -> list[str]:
+        """The slugs of a Daily, Speed or Boss: exercises every language has, that work in each graded language."""
+        cached = await self.cache.get(f"pick:{key}")
+        if cached:
+            return cached
+        try:
+            tracks = await asyncio.gather(*(self.client.exercises(lang.exercism_track) for lang in SHARED_LANGUAGES))
+        except ExercismUnavailable as exc:
+            raise ServiceUnavailableError("Exercism can't be reached right now — try again in a minute.") from exc
+        common = set.intersection(*({e.slug for e in track} for track in tracks))
+        # Levels are the first language's (Python); each language rates its own exercises.
+        candidates = [Candidate(e.slug, e.difficulty, e.topics) for e in tracks[0] if e.slug in common]
+        graded = [lang for lang in SHARED_LANGUAGES if self.library.gradable(lang.id)]
+
+        async def works(slug: str) -> bool:
+            return all([await self._works(lang, slug) for lang in graded])
+
+        chosen = await self._pick(candidates, key, bands, works)
+        if not chosen:
+            raise ServiceUnavailableError("Exercism has no challenge exercises right now.")
+        await self.cache.put(f"pick:{key}", chosen, ttl_seconds=ttl)
+        return chosen
+
     async def _stages(
         self, info: LanguageInfo, key: str, seed: str, bands: tuple[tuple[int, int], ...], ttl: int
     ) -> list[ExerciseSummary]:
@@ -135,16 +180,7 @@ class ChallengeService:
             return [by_slug[slug] for slug in cached]
 
         candidates = [Candidate(e.slug, e.difficulty, e.topics) for e in pool]
-        chosen: list[str] = []
-        for i, band in enumerate(bands):
-            order = shortlist(candidates, f"{seed}#{i}", band, exclude=set(chosen))
-            pick = None
-            for slug in order[:MAX_CHECKS]:
-                if await self._works(info, slug):
-                    pick = slug
-                    break
-            if pick or order:
-                chosen.append(pick or order[0])
+        chosen = await self._pick(candidates, seed, bands, lambda slug: self._works(info, slug))
         if not chosen:
             raise ServiceUnavailableError(f"Exercism has no {info.name} exercises right now.")
         await self.cache.put(f"pick:{key}", chosen, ttl_seconds=ttl)
@@ -160,14 +196,24 @@ class ChallengeService:
         return info
 
     async def _periodic(self, kind: ChallengeKind, period: str, language_id: str) -> _Spec:
+        """The challenge as `language_id` sees it: same exercises for everyone, named and linked in that language."""
         info = self._language(language_id)
+        if info not in SHARED_LANGUAGES:
+            raise UnprocessableError(f"{info.name} has its own practice. Solve these challenges in another language.")
         starts, ends = period_bounds(kind, period)
         if starts > utcnow():
             raise NotFoundError("That challenge hasn't started yet.")
         rule = RULES[kind]
-        cid = challenge_id(kind, period, language_id)
+        cid = challenge_id(kind, period)
         ttl = int((ends - utcnow()).total_seconds()) + 2 * 24 * 60 * 60
-        stages = await self._stages(info, cid, cid, rule.stages, max(ttl, 60))
+        slugs = await self._shared_slugs(cid, rule.stages, max(ttl, 60))
+        try:
+            by_slug = {e.slug: e for e in await self.client.exercises(info.exercism_track)}
+        except ExercismUnavailable as exc:
+            raise ServiceUnavailableError("Exercism can't be reached right now — try again in a minute.") from exc
+        if any(slug not in by_slug for slug in slugs):
+            raise ServiceUnavailableError("Exercism changed its exercises just now — try again in a minute.")
+        stages = [by_slug[slug] for slug in slugs]
         boss_name, boss_sprite = pick_boss(cid) if kind == "boss" else (None, None)
         return _Spec(
             id=cid,
@@ -189,11 +235,11 @@ class ChallengeService:
     async def _current(self, kind: ChallengeKind, language_id: str) -> _Spec:
         return await self._periodic(kind, period_of(kind, utcnow()), language_id)
 
-    async def _by_id(self, cid: str) -> _Spec:
+    async def _by_id(self, cid: str, language_id: str) -> _Spec:
         parsed = parse_id(cid)
         if not parsed:
             raise NotFoundError("Challenge not found.")
-        return await self._periodic(*parsed)
+        return await self._periodic(*parsed, language_id)
 
     async def _zone(self, user_id: str, course_id: str, boss_id: str) -> _Spec:
         course = await self.learning.get_course(user_id, course_id)
@@ -395,14 +441,16 @@ class ChallengeService:
         specs = await asyncio.gather(*(self._current(kind, language_id) for kind in KINDS))
         return [await self._view(user_id, spec) for spec in specs]
 
-    async def get(self, user_id: str, cid: str) -> LiveChallenge:
-        return await self._view(user_id, await self._by_id(cid))
+    async def get(self, user_id: str, cid: str, language_id: str) -> LiveChallenge:
+        return await self._view(user_id, await self._by_id(cid, language_id))
 
-    async def start(self, user_id: str, cid: str) -> LiveChallenge:
-        return await self._start(user_id, await self._by_id(cid))
+    async def start(self, user_id: str, cid: str, language_id: str) -> LiveChallenge:
+        return await self._start(user_id, await self._by_id(cid, language_id))
 
-    async def submit(self, user_id: str, cid: str, slug: str, files: dict[str, str]) -> ChallengeSubmitResult:
-        return await self._submit(user_id, await self._by_id(cid), slug, files)
+    async def submit(
+        self, user_id: str, cid: str, slug: str, files: dict[str, str], language_id: str
+    ) -> ChallengeSubmitResult:
+        return await self._submit(user_id, await self._by_id(cid, language_id), slug, files)
 
     # --- Public API: zone bosses ------------------------------------------------------------------------
 

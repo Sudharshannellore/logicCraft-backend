@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     mongodb_db: str = "codequest"
     seed_on_startup: bool = True
 
+    # Demo checkout hands out XP with no payment. Leave it off anywhere real players can sign up;
+    # turn it on only to try the store locally, until a payment provider is connected.
+    demo_checkout: bool = False
+
     # Signs access tokens. Must be set (and kept secret) in production; in development a random one is
     # generated at startup, which signs everyone out on every restart.
     jwt_secret: str = ""

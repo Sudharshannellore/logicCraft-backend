@@ -1,14 +1,15 @@
 """XP subscriptions and one-time packs.
 
-Demo checkout: no payment is taken. Swap `subscribe`/`buy_pack` for a payment provider's
-webhook (and credit XP there) when payments are connected.
+No payment provider is connected, so buying XP is refused unless `demo_checkout` is on (local
+trials only). Swap `subscribe`/`buy_pack` for a payment provider's webhook (and credit XP there)
+when payments are connected.
 """
 
 import calendar
 from datetime import datetime
 
 from app.core.clock import as_utc, new_id, utcnow
-from app.core.errors import ConflictError, NotFoundError
+from app.core.errors import ConflictError, NotFoundError, ServiceUnavailableError
 from app.repositories.catalog import XpPackRepository, XpPlanRepository
 from app.repositories.player_content import PurchaseRepository, SubscriptionRepository
 from app.schemas.store import (
@@ -39,12 +40,21 @@ class StoreService:
         subscriptions: SubscriptionRepository,
         purchases: PurchaseRepository,
         wallet: WalletService,
+        *,
+        demo_checkout: bool = False,
     ):
         self.plans = plans
         self.packs = packs
         self.subscriptions = subscriptions
         self.purchases = purchases
         self.wallet = wallet
+        self.demo_checkout = demo_checkout
+
+    def _require_checkout(self) -> None:
+        if not self.demo_checkout:
+            raise ServiceUnavailableError(
+                "Payments aren't available yet, so XP can't be bought right now.", code="payments_unavailable"
+            )
 
     async def list_plans(self) -> list[XpPlan]:
         return await self.plans.list()
@@ -77,8 +87,9 @@ class StoreService:
                     await self.subscriptions.delete(user_id)
                     return None
                 period_end = add_months(period_end, 12 if sub.billing == "yearly" else 1)
-            await self.wallet.credit(user_id, plan.monthly_xp, f"{plan.name} monthly XP drop")
-            await self._record(user_id, f"{plan.name} monthly XP drop", plan.monthly_xp, 0, next_drop)
+            if self.demo_checkout:
+                await self.wallet.credit(user_id, plan.monthly_xp, f"{plan.name} monthly XP drop")
+                await self._record(user_id, f"{plan.name} monthly XP drop", plan.monthly_xp, 0, next_drop)
             next_drop = add_months(next_drop, 1)
         if next_drop != as_utc(sub.next_drop_at) or period_end != as_utc(sub.period_ends_at):
             sub = sub.model_copy(update={"next_drop_at": next_drop, "period_ends_at": period_end})
@@ -95,6 +106,7 @@ class StoreService:
 
     async def subscribe(self, user_id: str, plan_id: PlanId, billing: Billing) -> SubscriptionState:
         """Starts (or switches to) a plan. A fresh period starts and its first month of XP lands right away."""
+        self._require_checkout()
         plan = await self._plan(plan_id)
         current = await self._catch_up(user_id)
         if current and current.plan_id == plan_id and current.billing == billing and not current.cancel_at_period_end:
@@ -127,6 +139,7 @@ class StoreService:
         return await self.state(user_id)
 
     async def buy_pack(self, user_id: str, pack_id: str) -> SubscriptionState:
+        self._require_checkout()
         pack = await self.packs.get(pack_id)
         if not pack:
             raise NotFoundError("XP pack not found.")

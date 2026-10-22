@@ -37,11 +37,12 @@ def test_daily_and_speed_rotate_at_midnight_utc_and_the_boss_weekly():
 
 
 @pytest.mark.parametrize(
-    ("kind", "period", "language"),
-    [("daily", "2026-10-20", "python"), ("speed", "2026-10-20", "csharp"), ("boss", "2026-W43", "cpp")],
+    ("kind", "period"), [("daily", "2026-10-20"), ("speed", "2026-10-20"), ("boss", "2026-W43")]
 )
-def test_challenge_ids_round_trip(kind, period, language):
-    assert parse_id(challenge_id(kind, period, language)) == (kind, period, language)
+def test_challenge_ids_round_trip(kind, period):
+    assert parse_id(challenge_id(kind, period)) == (kind, period)
+    # Ids from when each language had its own challenge still open the same one.
+    assert parse_id(f"{challenge_id(kind, period)}-python") == (kind, period)
 
 
 @pytest.mark.parametrize(
@@ -75,11 +76,12 @@ def test_boss_names_are_stable():
 
 
 class FakeClient:
-    def __init__(self, exercises):
+    def __init__(self, exercises, by_track=None):
         self._exercises = exercises
+        self._by_track = by_track or {}
 
     async def exercises(self, track):
-        return self._exercises
+        return self._by_track.get(track, self._exercises)
 
 
 class FakeCache:
@@ -207,13 +209,13 @@ def clock(monkeypatch):
     return c
 
 
-def _service(*, broken=()):
+def _service(*, broken=(), by_track=None):
     exercises = [
         ExerciseSummary(f"ex-{lvl}-{i}", f"Exercise {lvl}.{i}", lvl, []) for lvl in range(1, 11) for i in range(4)
     ]
     library = FakeLibrary(broken)
     service = ChallengeService(
-        FakeClient(exercises), FakeCache(), library, None, FakeAttempts(), FakeUsers(), FakeWallet(), FakeTracker()
+        FakeClient(exercises, by_track), FakeCache(), library, None, FakeAttempts(), FakeUsers(), FakeWallet(), FakeTracker()
     )
     return service, library
 
@@ -225,7 +227,7 @@ async def test_board_has_daily_speed_and_boss_with_the_right_levels(clock):
     service, _ = _service()
     daily, speed, boss = await service.board("u1", "python")
     assert (daily.kind, speed.kind, boss.kind) == ("daily", "speed", "boss")
-    assert daily.id == "daily-2026-10-20-python" and boss.id == "boss-2026-W43-python"
+    assert daily.id == "daily-2026-10-20" and boss.id == "boss-2026-W43"
     assert 3 <= daily.stages[0].level <= 5
     assert speed.stages[0].level <= 2
     assert [s.level for s in boss.stages] == sorted(s.level for s in boss.stages) and len(boss.stages) == 3
@@ -245,51 +247,51 @@ async def test_exercises_whose_starter_code_doesnt_run_are_skipped(clock):
 async def test_untestable_languages_are_shown_but_not_timed(clock):
     service, library = _service()
     board = await service.board("u1", "java")
-    assert not board[0].gradable and library.checked == []
+    assert not board[0].gradable
     with pytest.raises(Exception, match="can't run on this server"):
-        await service.start("u1", board[0].id)
+        await service.start("u1", board[0].id, "java")
 
 
 async def test_winning_the_daily_challenge_pays_the_bonus_once(clock):
     service, library = _service()
     daily = (await service.board("u1", "python"))[0]
     with pytest.raises(ConflictError):
-        await service.submit("u1", daily.id, daily.stages[0].slug, OK)  # clock not started
+        await service.submit("u1", daily.id, daily.stages[0].slug, OK, "python")  # clock not started
 
-    started = await service.start("u1", daily.id)
+    started = await service.start("u1", daily.id, "python")
     assert started.me.status == "in_progress"
     clock.now += timedelta(minutes=4)
-    failed = await service.submit("u1", daily.id, daily.stages[0].slug, {"solution.py": "nope"})
+    failed = await service.submit("u1", daily.id, daily.stages[0].slug, {"solution.py": "nope"}, "python")
     assert not failed.won and failed.challenge.me.status == "in_progress"
 
     clock.now += timedelta(minutes=1)
-    won = await service.submit("u1", daily.id, daily.stages[0].slug, OK)
+    won = await service.submit("u1", daily.id, daily.stages[0].slug, OK, "python")
     assert won.won and won.bonus_xp == 100
     assert won.challenge.me.status == "won" and won.challenge.me.seconds == 300
     assert won.challenge.players == 1 and won.challenge.winners == 1
     assert service.users.stats == {"challenges_won": 1}
 
-    again = await service.submit("u1", daily.id, daily.stages[0].slug, OK)
+    again = await service.submit("u1", daily.id, daily.stages[0].slug, OK, "python")
     assert not again.won and again.bonus_xp == 0
 
 
 async def test_the_daily_clock_runs_out_and_cant_be_restarted(clock):
     service, _ = _service()
     daily = (await service.board("u1", "python"))[0]
-    await service.start("u1", daily.id)
+    await service.start("u1", daily.id, "python")
     clock.now += timedelta(minutes=31)
-    late = await service.submit("u1", daily.id, daily.stages[0].slug, OK)
+    late = await service.submit("u1", daily.id, daily.stages[0].slug, OK, "python")
     assert not late.won and late.challenge.me.status == "timed_out"
     with pytest.raises(ConflictError):
-        await service.start("u1", daily.id)
+        await service.start("u1", daily.id, "python")
 
 
 async def test_a_fast_speed_round_counts_as_a_speed_record(clock):
     service, _ = _service()
     speed = (await service.board("u1", "python"))[1]
-    await service.start("u1", speed.id)
+    await service.start("u1", speed.id, "python")
     clock.now += timedelta(seconds=95)
-    result = await service.submit("u1", speed.id, speed.stages[0].slug, OK)
+    result = await service.submit("u1", speed.id, speed.stages[0].slug, OK, "python")
     assert result.won and result.bonus_xp == 60
     assert service.users.stats == {"challenges_won": 1, "speed_records": 1}
 
@@ -298,23 +300,23 @@ async def test_the_boss_is_beaten_stage_by_stage_and_heals_when_time_runs_out(cl
     service, _ = _service()
     boss = (await service.board("u1", "python"))[2]
     first, second, third = (s.slug for s in boss.stages)
-    await service.start("u1", boss.id)
+    await service.start("u1", boss.id, "python")
 
-    skipped = await service.submit("u1", boss.id, third, OK)  # out of order: no progress
+    skipped = await service.submit("u1", boss.id, third, OK, "python")  # out of order: no progress
     assert not any(s.cleared for s in skipped.challenge.stages)
-    await service.submit("u1", boss.id, first, OK)
-    await service.submit("u1", boss.id, second, OK)
+    await service.submit("u1", boss.id, first, OK, "python")
+    await service.submit("u1", boss.id, second, OK, "python")
     assert service.tracker.events == ["boss_stage_cleared", "boss_stage_cleared"]
 
     clock.now += timedelta(minutes=61)
-    view = await service.get("u1", boss.id)
+    view = await service.get("u1", boss.id, "python")
     assert view.me.status == "timed_out" and not any(s.cleared for s in view.stages)
 
-    restarted = await service.start("u1", boss.id)
+    restarted = await service.start("u1", boss.id, "python")
     assert restarted.me.status == "in_progress" and restarted.me.tries == 2
     for slug in (first, second):
-        await service.submit("u1", boss.id, slug, OK)
-    won = await service.submit("u1", boss.id, third, OK)
+        await service.submit("u1", boss.id, slug, OK, "python")
+    won = await service.submit("u1", boss.id, third, OK, "python")
     assert won.won and won.bonus_xp == 400
     assert service.users.stats == {"challenges_won": 1, "bosses_defeated": 1}
 
@@ -322,14 +324,73 @@ async def test_the_boss_is_beaten_stage_by_stage_and_heals_when_time_runs_out(cl
 async def test_future_and_unknown_challenges_are_not_found(clock):
     service, _ = _service()
     with pytest.raises(NotFoundError):
-        await service.get("u1", "daily-2026-10-21-python")
+        await service.get("u1", "daily-2026-10-21", "python")
     with pytest.raises(NotFoundError):
-        await service.get("u1", "daily-2026-10-20-cobol")
-    yesterday = await service.get("u1", "daily-2026-10-19-python")
+        await service.get("u1", "daily-2026-10-20", "cobol")
+    yesterday = await service.get("u1", "daily-2026-10-19", "python")
     assert yesterday.me.status == "ended"
     with pytest.raises(ConflictError):
-        await service.start("u1", yesterday.id)
+        await service.start("u1", yesterday.id, "python")
 
 
 def test_hello_world_is_never_a_challenge():
     assert shortlist([Candidate("hello-world", 1), Candidate("leap", 1)], "s", (1, 1), exclude=set()) == ["leap"]
+
+
+# --- One challenge, every language ----------------------------------------------------------------
+
+
+async def test_the_same_challenge_is_served_in_every_language(clock):
+    service, _ = _service()
+    python = await service.board("u1", "python")
+    javascript = await service.board("u1", "javascript")
+    java = await service.board("u1", "java")
+    for one, two, three in zip(python, javascript, java, strict=True):
+        assert one.id == two.id == three.id
+        assert [x.slug for x in one.stages] == [x.slug for x in two.stages] == [x.slug for x in three.stages]
+    assert (python[0].language, javascript[0].language, java[0].language) == ("python", "javascript", "java")
+
+
+async def test_switching_language_keeps_the_clock_and_pays_the_bonus_once(clock):
+    service, _ = _service()
+    daily = (await service.board("u1", "python"))[0]
+    started = await service.start("u1", daily.id, "python")
+    clock.now += timedelta(minutes=2)
+
+    in_js = await service.get("u1", daily.id, "javascript")
+    assert in_js.me.status == "in_progress" and in_js.me.deadline == started.me.deadline
+    won = await service.submit("u1", daily.id, daily.stages[0].slug, OK, "javascript")
+    assert won.won and won.bonus_xp == 100
+
+    again = await service.submit("u1", daily.id, daily.stages[0].slug, OK, "python")
+    assert not again.won and again.bonus_xp == 0
+    assert (await service.get("u1", daily.id, "typescript")).me.status == "won"
+    # A second language doesn't give a second run: starting it just shows the win.
+    assert (await service.start("u1", daily.id, "typescript")).me.status == "won"
+
+
+async def test_only_exercises_every_language_has_become_challenges(clock):
+    shared = [ExerciseSummary(f"shared-{i}", f"Shared {i}", 1 + i % 10, []) for i in range(16)]
+    by_track = {
+        lang.exercism_track: shared
+        + [ExerciseSummary(f"{lang.id}-only-{i}", f"Only {lang.id} {i}", 1 + i % 10, []) for i in range(30)]
+        for lang in challenges_module.SHARED_LANGUAGES
+    }
+    service, _ = _service(by_track=by_track)
+    for challenge in await service.board("u1", "go"):
+        assert all(stage.slug.startswith("shared-") for stage in challenge.stages)
+
+
+async def test_exercises_must_work_in_every_graded_language(clock):
+    service, library = _service()
+    first = (await service.board("u1", "python"))[0].stages[0].slug
+    checked_languages = {key.split(":")[1] for key in service.cache.data if key.startswith("check:")}
+    assert {"python", "javascript", "typescript"} <= checked_languages
+    service2, _ = _service(broken={first})
+    assert (await service2.board("u1", "javascript"))[0].stages[0].slug != first
+
+
+async def test_sql_has_its_own_practice_and_isnt_a_challenge_language(clock):
+    service, _ = _service()
+    with pytest.raises(Exception, match="own practice"):
+        await service.board("u1", "sql")

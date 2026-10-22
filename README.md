@@ -199,8 +199,11 @@ test framework must be installed on the server) and add the language to `GRADED_
 
 ## Live challenges
 
-The Challenges page is built from the same Exercism tracks, for all 13 languages. Nothing is stored
-ahead of time: each challenge is picked deterministically from the live track, so every player gets the same one.
+The Challenges page is built from the same Exercism tracks. Nothing is stored ahead of time: each challenge is
+picked deterministically, so every player gets the same one. **A challenge is the same in every language**: it is
+picked from the exercises that every language's track has (about 60, excluding SQL, whose track teaches a different
+syllabus), and its id has no language (`daily-2026-10-20`). The player chooses the language they solve it in; the
+clock, the fastest-times board and the bonus belong to the challenge, so switching language changes none of them.
 
 | Challenge | Rotates | Exercises (Exercism level) | Clock | Bonus XP |
 |---|---|---|---|---|
@@ -209,9 +212,9 @@ ahead of time: each challenge is picked deterministically from the live track, s
 | Weekly Boss | Monday 00:00 UTC | 3 in order (1–3, 4–6, 7–10) | 60 min, retry from round 1 | 400 |
 | Zone boss (course map) | never | the boss's rounds at the zone's level | 15 min per round, retry | the boss's reward; opens the next zone |
 
-- **Picking.** Exercises in the level band are ordered by a hash of the challenge id and slug. For graded
-  languages, each candidate's starter code is test-run once (the verdict is cached for 14 days); an exercise
-  whose starter doesn't run, or already passes, is skipped. Refactoring katas and "Hello, World!" are never picked.
+- **Picking.** Exercises in the level band are ordered by a hash of the challenge id and slug. Each candidate's
+  starter code is test-run once in every language graded here (the verdict is cached for 14 days); an exercise
+  whose starter doesn't run, or already passes, in any of them is skipped. Refactoring katas and "Hello, World!" are never picked.
   The pick is cached until the challenge rotates out. The first visit of the day can take a few seconds.
 - **Timing is server-side.** `POST …/start` records the start and deadline in `challenge_attempts`; a stage
   only counts if it passes before the deadline. The solve time (start to final stage) goes on the
@@ -223,8 +226,9 @@ ahead of time: each challenge is picked deterministically from the live track, s
   with links to Exercism's editor, untimed and without a bonus. A zone boss in those courses can be claimed
   to open the next zone, but pays no XP because nothing is verified.
 
-Endpoints: `GET /challenges?language=python`, `GET /challenges/{id}`, `POST /challenges/{id}/start`,
-`POST /challenges/{id}/submit` (`{slug, files}`). Zone bosses: `GET /courses/{id}/bosses/{bossId}`,
+Endpoints: `GET /challenges?language=python`, `GET /challenges/{id}?language=`, `POST /challenges/{id}/start?language=`,
+`POST /challenges/{id}/submit` (`{slug, language, files}`). `language` only chooses how the exercises are shown and
+graded. Zone bosses: `GET /courses/{id}/bosses/{bossId}`,
 `POST …/start`, `…/submit`, `…/claim`. Code: `app/domain/challenges.py`, `app/services/challenges.py`.
 
 ## Job board (live listings)
