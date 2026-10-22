@@ -7,7 +7,7 @@ from app.db import collections as c
 async def ensure_indexes(db: AsyncDatabase, *, tutorial_cache_ttl_seconds: int, login_lockout_seconds: int) -> None:
     await db[c.USERS].create_indexes(
         [
-            IndexModel([("wallet.lifetime_xp", DESCENDING)]),
+            IndexModel([("wallet.xp", DESCENDING)]),
             IndexModel([("handle", ASCENDING)], unique=True),
             IndexModel([("email", ASCENDING)], unique=True),
         ]

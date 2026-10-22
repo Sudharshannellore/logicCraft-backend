@@ -1,10 +1,10 @@
-"""Levels and leagues, both derived from lifetime XP (spending XP never costs a level)."""
+"""Levels and leagues, both derived from total XP (the wallet balance, so spending XP lowers them)."""
 
 from math import isqrt
 
 from app.schemas.users import LeagueInfo
 
-LEVEL_XP_UNIT = 25  # reaching level n takes 25·n² lifetime XP
+LEVEL_XP_UNIT = 25  # reaching level n takes 25·n² total XP
 
 
 def level_for(lifetime_xp: int) -> int:

@@ -30,7 +30,7 @@ class LeaderboardService:
             username=user.username,
             avatar_color=user.avatar_color,
             avatar_initials=user.avatar_initials,
-            level=level_for(user.wallet.lifetime_xp),
+            level=level_for(user.wallet.xp),
             xp=xp,
             win_rate=_win_rate(user),
             badges=_BADGES.get(rank, []),
@@ -38,7 +38,7 @@ class LeaderboardService:
         )
 
     async def leaderboard(self, user_id: str, scope: LeaderboardScope, limit: int) -> list[LeaderboardEntry]:
-        """global/friends rank by lifetime XP; weekly/monthly by XP earned in the period."""
+        """global/friends rank by total XP; weekly/monthly by XP earned in the period."""
         if scope in _PERIODS:
             totals = await self.ledger.earned_since(utcnow() - _PERIODS[scope], limit=limit)
             users = {u.id: u for u in await self.users.get_many([t["user_id"] for t in totals])}
@@ -48,7 +48,7 @@ class LeaderboardService:
                 people = await self.users.get_many([user_id, *await self.friendships.friend_ids(user_id)])
             else:
                 people = await self.users.top_by_xp(limit=limit)
-            rows = sorted(((u, u.wallet.lifetime_xp) for u in people), key=lambda r: -r[1])
+            rows = sorted(((u, u.wallet.xp) for u in people), key=lambda r: -r[1])
         return [self._entry(i, u, xp, user_id) for i, (u, xp) in enumerate(rows[:limit], start=1)]
 
     async def activity(self, limit: int) -> list[ActivityEvent]:

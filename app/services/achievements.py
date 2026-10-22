@@ -18,7 +18,7 @@ def metrics(user: UserDoc) -> dict[str, int]:
         "debug_won": s.debug_won,
         "duels_won": s.duels_won,
         "longest_streak": user.streak.longest,
-        "lifetime_xp": user.wallet.lifetime_xp,
+        "lifetime_xp": user.wallet.xp,
     }
 
 

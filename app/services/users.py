@@ -29,8 +29,8 @@ def to_player(user: UserDoc) -> Player:
         username=user.username,
         avatar_color=user.avatar_color,
         avatar_initials=user.avatar_initials,
-        level=level_for(user.wallet.lifetime_xp),
-        league=league_for(user.wallet.lifetime_xp).label,
+        level=level_for(user.wallet.xp),
+        league=league_for(user.wallet.xp).label,
         online=is_online(user),
     )
 
@@ -52,7 +52,7 @@ class UserService:
 
     async def profile(self, user_id: str) -> UserProfile:
         user = await self.get(user_id)
-        lifetime = user.wallet.lifetime_xp
+        lifetime = user.wallet.xp
         s = user.stats
         return UserProfile(
             id=user.id,

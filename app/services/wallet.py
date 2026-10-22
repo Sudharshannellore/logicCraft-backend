@@ -1,7 +1,8 @@
 """XP wallet: Logicraft's single currency.
 
-`xp` is the spendable balance. `lifetime_xp` only grows on *earned* XP and drives levels, leagues
-and leaderboards — spending never costs a level. Every movement is written to the ledger.
+`xp` is the player's total XP and also their spendable balance: it drives levels, leagues and the
+global leaderboards, so spending lowers them. `lifetime_xp` is kept as a running total of earned XP.
+Every movement is written to the ledger.
 """
 
 from datetime import date, timedelta

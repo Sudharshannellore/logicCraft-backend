@@ -48,7 +48,7 @@ class UserRepository(Repository):
         return {k: int(row.get(k) or 0) for k in ("learners", "problems_solved", "bosses_defeated")}
 
     async def top_by_xp(self, *, limit: int = 100) -> list[UserDoc]:
-        cursor = self.col.find({}).sort("wallet.lifetime_xp", -1).limit(limit)
+        cursor = self.col.find({}).sort("wallet.xp", -1).limit(limit)
         return [UserDoc.model_validate(from_doc(d)) async for d in cursor]
 
     async def insert(self, user: UserDoc) -> None:
@@ -70,8 +70,8 @@ class UserRepository(Repository):
         return await self.col.count_documents({"handle": handle, "_id": {"$ne": excluding}}, limit=1) > 0
 
     async def rank_of(self, lifetime_xp: int) -> int:
-        """1-based global rank by lifetime XP."""
-        return await self.col.count_documents({"wallet.lifetime_xp": {"$gt": lifetime_xp}}) + 1
+        """1-based global rank by total XP."""
+        return await self.col.count_documents({"wallet.xp": {"$gt": lifetime_xp}}) + 1
 
     # --- Wallet (atomic) ------------------------------------------------------------
 
