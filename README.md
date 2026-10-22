@@ -106,6 +106,18 @@ never fails the request.
 
 To add a platform, subclass `TutorialProvider` in `app/integrations/tutorials/` and register it in `build_providers`.
 
+## Quest AI (OpenRouter)
+
+`POST /mentor/ask` answers with a model through [OpenRouter](https://openrouter.ai) when `OPENROUTER_API_KEY` is set
+(`OPENROUTER_MODEL` picks the model, default `openai/gpt-4o-mini`). The prompt is built in `app/domain/mentor.py`
+from the problem or lesson the learner is viewing and tells the model to teach rather than hand over solutions.
+The client is `app/integrations/llm/openrouter.py`.
+
+- The XP charge is the same as before and is taken first, atomically.
+- With no key, or if OpenRouter fails or times out, the answer comes from the built-in rule-based mentor instead,
+  so Ask never errors because of the model.
+- Suggested questions stay rule-based and free.
+
 ## Courses
 
 13 worlds, one per language: Python, JavaScript, SQL, TypeScript, Java, C#, C++, C, PHP, Go, Rust, Kotlin and
@@ -330,6 +342,6 @@ Timestamps (`appliedAt`, `updatedAt`, duel times, subscription dates) are epoch 
 
 - **Achievement without a trigger.** "League Champion" has no rule yet, because there is no weekly-league flow.
 - **Honour-system zone bosses** in the nine languages graded on Exercism: claiming one opens the next zone (no XP is paid).
-- **Rule-based Quest AI.** The mentor and resume AI are rule-based ports of the frontend logic, behind service methods with the same signatures, ready to swap for an LLM.
+- **Resume AI is still rule-based.** Quest AI's mentor uses OpenRouter; the resume actions (`/resume-ai/*`) are rule-based ports of the frontend logic, behind service methods that can be swapped the same way.
 - **Demo checkout.** Subscriptions and packs take no payment.
 - **Remote jobs only.** Both job boards list remote roles; there's no free keyless feed of on-site jobs worldwide.

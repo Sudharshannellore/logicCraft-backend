@@ -14,6 +14,7 @@ from app.integrations.execution import CodeExecutor
 from app.integrations.docs import DocsClient
 from app.integrations.exercism.client import ExercismClient
 from app.integrations.jobs.boards import build_boards
+from app.integrations.llm import OpenRouterClient, build_llm
 from app.integrations.tutorials import TutorialProvider
 from app.repositories import catalog
 from app.repositories.auth import LoginFailureRepository, RefreshTokenRepository
@@ -191,8 +192,12 @@ class Container:
         return PathService(self.learning, PathEnrollmentRepository(self.db))
 
     @cached_property
+    def llm(self) -> OpenRouterClient | None:
+        return build_llm(self.http, self.settings)
+
+    @cached_property
     def mentor(self) -> MentorService:
-        return MentorService(self.problem_repo, self.learning, self.wallet)
+        return MentorService(self.problem_repo, self.learning, self.wallet, self.llm)
 
     # --- Practice & challenges ------------------------------------------------------------------
 

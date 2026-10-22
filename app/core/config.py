@@ -40,6 +40,16 @@ class Settings(BaseSettings):
     github_token: str = ""
     youtube_api_key: str = ""
 
+    # Quest AI answers come from OpenRouter when a key is set; otherwise (or if a call fails) the rule-based mentor answers.
+    openrouter_api_key: str = ""
+    openrouter_model: str = "openai/gpt-4o-mini"
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    openrouter_timeout_seconds: float = 30.0
+    openrouter_max_tokens: int = 500
+    # Sent as HTTP-Referer / X-Title so OpenRouter can attribute traffic to the app.
+    openrouter_app_url: str = ""
+    openrouter_app_name: str = "Logicraft"
+
     code_executor: Literal["local", "disabled"] = "local"
     code_timeout_seconds: float = 5.0
     code_memory_limit_mb: int = 256
