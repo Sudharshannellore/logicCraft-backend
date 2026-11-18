@@ -52,8 +52,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 logger.info("Loaded the course and practice catalog into an empty database.")
             keep_alive_url = keep_alive_target(settings)
             if keep_alive_url:
+                async def touch_db() -> None:
+                    # A real read, so Atlas counts it as activity (it pauses idle free clusters after 60 days).
+                    await mongo.db.command("ping")
+                    names = await mongo.db.list_collection_names()
+                    if names:
+                        await mongo.db[names[0]].find_one({}, {"_id": 1})
+
                 keep_alive_task = asyncio.create_task(
-                    keep_alive_loop(keep_alive_url, settings.keep_alive_interval_seconds)
+                    keep_alive_loop(keep_alive_url, settings.keep_alive_interval_seconds, touch_db)
                 )
                 logger.info("Keep-alive pinging %s every %ss.", keep_alive_url, settings.keep_alive_interval_seconds)
             yield
