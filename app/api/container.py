@@ -17,7 +17,6 @@ from app.integrations.jobs.boards import build_boards
 from app.integrations.llm import OpenRouterClient, build_llm
 from app.integrations.tutorials import TutorialProvider
 from app.repositories import catalog
-from app.repositories.auth import LoginFailureRepository, RefreshTokenRepository
 from app.repositories.challenges import ChallengeAttemptRepository
 from app.repositories.exercism_cache import ExercismCacheRepository
 from app.repositories.jobs import JobFeedRepository, JobListingRepository
@@ -36,7 +35,6 @@ from app.repositories.social import DuelRepository, FriendRequestRepository, Fri
 from app.repositories.tutorial_cache import TutorialCacheRepository
 from app.repositories.users import UserRepository
 from app.services.achievements import AchievementService
-from app.services.auth import AuthService
 from app.services.challenges import ChallengeService
 from app.services.jobs import JobService, ResumeAIService
 from app.services.framework_quiz import FrameworkQuizService
@@ -110,12 +108,6 @@ class Container:
     @cached_property
     def users(self) -> UserService:
         return UserService(self.user_repo)
-
-    @cached_property
-    def auth(self) -> AuthService:
-        return AuthService(
-            self.user_repo, RefreshTokenRepository(self.db), LoginFailureRepository(self.db), self.users, self.settings
-        )
 
     @cached_property
     def achievements(self) -> AchievementService:

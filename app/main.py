@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import secrets
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -19,6 +18,7 @@ from app.integrations.execution import build_executor
 from app.integrations.http import build_http_client
 from app.integrations.tutorials import build_providers
 from app.seed.seeder import seed_if_empty
+from app.services.demo import ensure_demo_user
 
 logger = logging.getLogger(__name__)
 
@@ -26,11 +26,6 @@ logger = logging.getLogger(__name__)
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     configure_logging(settings.log_level)
-    if not settings.jwt_secret:
-        if settings.environment == "production":
-            raise RuntimeError("Set JWT_SECRET: tokens can't be signed safely without it.")
-        logger.warning("JWT_SECRET is not set; using a random one, so every restart signs everyone out.")
-        settings = settings.model_copy(update={"jwt_secret": secrets.token_urlsafe(64)})
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -43,11 +38,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.executor = build_executor(settings)
         keep_alive_task: asyncio.Task | None = None
         try:
-            await ensure_indexes(
-                mongo.db,
-                tutorial_cache_ttl_seconds=settings.tutorial_cache_ttl_seconds,
-                login_lockout_seconds=settings.login_lockout_minutes * 60,
-            )
+            await ensure_indexes(mongo.db, tutorial_cache_ttl_seconds=settings.tutorial_cache_ttl_seconds)
+            await ensure_demo_user(mongo.db, with_data=settings.demo_data)
             if settings.seed_on_startup and await seed_if_empty(mongo.db):
                 logger.info("Loaded the course and practice catalog into an empty database.")
             keep_alive_url = keep_alive_target(settings)
@@ -74,8 +66,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         title=settings.app_name,
         version="0.1.0",
         description=(
-            "Backend for Logicraft, a gamified coding-learning platform. Sign in with `POST /auth/login` and send "
-            "`Authorization: Bearer <accessToken>`; in these docs, use **Authorize** with your email and password."
+            "Backend for Logicraft, a gamified coding-learning platform. This is a showcase: there is no sign-in, "
+            "every request acts as the shared demo player."
         ),
         lifespan=lifespan,
     )

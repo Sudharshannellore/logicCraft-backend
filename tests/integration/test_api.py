@@ -1,5 +1,3 @@
-from tests.integration.conftest import register
-
 TWO_SUM = (
     "def two_sum(nums, target):\n"
     "    seen = {}\n"
@@ -77,31 +75,6 @@ async def test_spending_requires_enough_xp(client):
     refused = [a for a in asks if a.status_code == 402]
     assert len(refused) == 5 and refused[0].json()["error"]["code"] == "insufficient_xp"
     assert await xp(client) == 0
-
-
-async def test_duel_between_two_players_settles_stakes(anonymous):
-    ana = await register(anonymous, "Ana Lee", "ana@example.com")
-    ben = await register(anonymous, "Ben Cho", "ben@example.com")
-    ben_id = (await anonymous.get("/users/me", headers=ben)).json()["id"]
-    ana_id = (await anonymous.get("/users/me", headers=ana)).json()["id"]
-    await anonymous.post("/social/friend-requests", json={"playerId": ben_id}, headers=ana)
-    await anonymous.post(f"/social/friend-requests/{ana_id}/accept", headers=ben)
-
-    body = {"friendId": ben_id, "problemSlug": "two-sum", "timeLimitMinutes": 10, "stake": 25}
-    duel = (await anonymous.post("/duels", json=body, headers=ana)).json()["duel"]
-    assert duel["status"] == "pending" and await xp(anonymous, ana) == 175  # stake held
-    assert (await anonymous.post(f"/duels/{duel['id']}/accept", headers=ben)).json()["duel"]["status"] == "active"
-    await anonymous.post(f"/duels/{duel['id']}/start", headers=ana)
-    await anonymous.post(f"/duels/{duel['id']}/start", headers=ben)
-
-    solved = await anonymous.post(
-        "/problems/two-sum/submit", json={"language": "python", "code": TWO_SUM, "duelId": duel["id"]}, headers=ana
-    )
-    assert solved.json()["duel"]["myFinished"]
-    final = (await anonymous.post(f"/duels/{duel['id']}/forfeit", headers=ben)).json()
-    assert final["status"] == "lost"
-    # Ana: 200 − 25 stake + 50 (both stakes) + 40 win bonus + 100 for the problem. Ben: 200 − 25.
-    assert await xp(anonymous, ana) == 365 and await xp(anonymous, ben) == 175
 
 
 async def test_quest_needs_its_tasks_and_advances_with_play(client):

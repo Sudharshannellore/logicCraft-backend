@@ -18,19 +18,12 @@ class Settings(BaseSettings):
     mongodb_uri: str = "mongodb://localhost:27017"
     mongodb_db: str = "codequest"
     seed_on_startup: bool = True
+    # Fill the shared demo player with progress and add fictional rivals, friends and activity.
+    demo_data: bool = True
 
-    # Demo checkout hands out XP with no payment. Leave it off anywhere real players can sign up;
+    # Demo checkout hands out XP with no payment. Leave it off anywhere the app is public;
     # turn it on only to try the store locally, until a payment provider is connected.
     demo_checkout: bool = False
-
-    # Signs access tokens. Must be set (and kept secret) in production; in development a random one is
-    # generated at startup, which signs everyone out on every restart.
-    jwt_secret: str = ""
-    access_token_minutes: int = 30
-    refresh_token_days: int = 14
-    # Failed logins allowed per email before it's locked for `login_lockout_minutes`.
-    login_max_failures: int = 5
-    login_lockout_minutes: int = 15
 
     http_timeout_seconds: float = 6.0
     http_user_agent: str = "Logicraft/0.1 (learning platform; contact: dev@logicraft.local)"

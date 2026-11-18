@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends
 
 from app.api.deps import get_current_user_id
 from app.api.routes import (
-    auth,
     challenges,
     framework_quiz,
     gamification,
@@ -23,11 +22,9 @@ from app.api.routes import (
 
 api_router = APIRouter()
 
-# Public: health, economy config, the landing page's activity feed, and signing in.
-for module in (system, auth):
-    api_router.include_router(module.router)
+api_router.include_router(system.router)
 
-# Everything else needs a signed-in player — enforced here once, so no route can forget it.
+# Everything else acts as the demo player (see get_current_user_id).
 protected = (
     users,
     learning,

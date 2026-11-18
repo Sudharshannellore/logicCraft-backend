@@ -8,6 +8,7 @@ from app.db import collections as c
 from app.db.indexes import ensure_indexes
 from app.db.mongo import Mongo
 from app.seed.seeder import seed_catalog
+from app.services.demo import ensure_demo_user
 
 PLAYER_COLLECTIONS = [
     c.USERS,
@@ -25,8 +26,6 @@ PLAYER_COLLECTIONS = [
     c.SUBMISSIONS,
     c.PATH_ENROLLMENTS,
     c.QUIZ_ATTEMPTS,
-    c.REFRESH_TOKENS,
-    c.LOGIN_FAILURES,
 ]
 
 
@@ -37,15 +36,12 @@ async def main(reset: bool) -> None:
         if reset:  # wipe first, so indexes added since the last seed (e.g. unique emails) can build
             for name in PLAYER_COLLECTIONS:
                 await mongo.db[name].delete_many({})
-        await ensure_indexes(
-            mongo.db,
-            tutorial_cache_ttl_seconds=settings.tutorial_cache_ttl_seconds,
-            login_lockout_seconds=settings.login_lockout_minutes * 60,
-        )
+        await ensure_indexes(mongo.db, tutorial_cache_ttl_seconds=settings.tutorial_cache_ttl_seconds)
+        await ensure_demo_user(mongo.db, with_data=settings.demo_data)
         await seed_catalog(mongo.db)
         print("Catalog reloaded.")
         if reset:
-            print("Every player and their data were deleted. New accounts come from sign-up.")
+            print("Every player and their data were deleted; the demo player was recreated.")
     finally:
         await mongo.close()
 

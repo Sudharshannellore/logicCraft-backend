@@ -19,37 +19,17 @@ cp .env.example .env
 ```
 
 - Interactive docs: http://localhost:8000/docs
-- On first start an empty database gets the catalog (problems, quests, plans; courses are live, not seeded). There is no demo data: every player comes from a real sign-up.
+- On first start an empty database gets the catalog (problems, quests, plans; courses are live, not seeded). The shared demo player is created automatically.
 - `python -m app.seed` reloads catalog content after editing `app/seed/data` (it also drops the retired course collections); `python -m app.seed --reset` also deletes every player and their data.
 - Tests: `.venv/Scripts/python -m pytest` (integration tests use a throwaway `codequest_test` database and skip themselves when MongoDB isn't running). Lint: `ruff check app tests`.
 
-## Authentication
+## Demo showcase (no authentication)
 
-Players sign in with email and password. Every endpoint needs `Authorization: Bearer <accessToken>` except
-`/health`, `/config/economy`, `/activity` (the landing page's feed) and `/auth/*`. In http://localhost:8000/docs,
-click **Authorize** and enter an email (in the *username* box) and password.
-
-| Endpoint | What it does |
-|---|---|
-| `POST /auth/register` `{username, email, password}` | Creates an account (200 starter XP) and signs it in |
-| `POST /auth/login` `{email, password}` | Returns `{tokens, user}` |
-| `POST /auth/refresh` `{refreshToken}` | Swaps a refresh token for a new pair; each refresh token works once |
-| `POST /auth/logout` `{refreshToken}` | Ends this session |
-| `POST /auth/logout-all` | Ends every session, including access tokens already issued |
-| `POST /auth/change-password` `{currentPassword, newPassword}` | Signs out other devices and returns a new session |
-
-How it works:
-- **Passwords** are hashed with Argon2id. They need 8+ characters, including a letter and a number.
-- **Access tokens** are JWTs that last `ACCESS_TOKEN_MINUTES` (default 30) and are signed with `JWT_SECRET`, which must be set in production.
-- **Refresh tokens** are random and last `REFRESH_TOKEN_DAYS` (default 14). Only their SHA-256 is stored.
-- **Revocation:** changing your password or signing out everywhere bumps a per-user token version, so existing access tokens stop working immediately.
-- **Lockout:** after `LOGIN_MAX_FAILURES` wrong passwords, that email is locked for `LOGIN_LOCKOUT_MINUTES`.
-- **Login errors** never say whether an email exists.
-
-### Accounts
-
-Create accounts through the sign-up page (or `POST /auth/register`). To test player-vs-player features
-(friends, duels), sign up two accounts, for example in two browser profiles.
+There is no sign-up or sign-in. Every request acts as one shared demo player (`demo-player`), which is created
+on startup if it doesn't exist. `/auth/*` endpoints and token settings were removed. All visitors share that
+player's progress. With `DEMO_DATA=true` (the default) the demo player starts with progress, 4 friends, a pending
+friend request and 9 fictional rivals with XP and recent activity, so the leaderboard and landing ticker are populated.
+`python -m app.seed --reset` wipes everything and recreates this data.
 
 ## Architecture
 

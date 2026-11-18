@@ -49,22 +49,6 @@ async def mongo_available():
         await client.close()
 
 
-PASSWORD = "Learning2026"
-
-
-async def register(http: httpx.AsyncClient, username: str, email: str, password: str = PASSWORD) -> dict[str, str]:
-    """Signs a brand-new player up and returns their Authorization headers."""
-    response = await http.post("/auth/register", json={"username": username, "email": email, "password": password})
-    assert response.status_code == 201, response.text
-    return {"Authorization": f"Bearer {response.json()['tokens']['accessToken']}"}
-
-
-async def sign_in(http: httpx.AsyncClient, email: str, password: str = PASSWORD) -> dict[str, str]:
-    response = await http.post("/auth/login", json={"email": email, "password": password})
-    assert response.status_code == 200, response.text
-    return {"Authorization": f"Bearer {response.json()['tokens']['accessToken']}"}
-
-
 @pytest.fixture
 async def anonymous(mongo_available):
     """A fresh app (catalog loaded, no players) for each test, with no one signed in."""
@@ -76,8 +60,8 @@ async def anonymous(mongo_available):
         mongodb_uri=MONGODB_URI,
         mongodb_db=TEST_DB,
         seed_on_startup=True,
+        demo_data=False,
         code_executor="local",
-        jwt_secret="test-secret-" + "x" * 40,
         _env_file=None,
     )
     app = create_app(settings)
@@ -87,11 +71,7 @@ async def anonymous(mongo_available):
             yield http
 
 
-LEARNER = {"username": "Test Learner", "email": "learner@example.com"}
-
-
 @pytest.fixture
 async def client(anonymous):
-    """The same app, signed in as a newly registered learner."""
-    anonymous.headers.update(await register(anonymous, **LEARNER))
+    """The same app; every request acts as the shared demo player."""
     return anonymous

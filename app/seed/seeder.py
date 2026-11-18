@@ -1,8 +1,7 @@
 """Loads catalog content (problems, quests, plans…) into MongoDB. Courses are not here: they are live.
 
 Catalog collections are validated through the API models, then replaced wholesale, so
-re-seeding picks up content edits. There is no demo data: players and everything they do
-come only from real sign-ups.
+re-seeding picks up content edits. Players are not seeded; the shared demo player is created at startup.
 """
 
 import json
@@ -65,7 +64,7 @@ async def seed_catalog(db: AsyncDatabase) -> None:
 
 
 async def seed_if_empty(db: AsyncDatabase) -> bool:
-    """Loads the catalog on first start. Returns True when it did. Players only come from real sign-ups."""
+    """Loads the catalog on first start. Returns True when it did."""
     if await db[c.PROBLEMS].estimated_document_count() > 0:
         return False
     await seed_catalog(db)

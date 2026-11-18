@@ -4,22 +4,13 @@ from pymongo.asynchronous.database import AsyncDatabase
 from app.db import collections as c
 
 
-async def ensure_indexes(db: AsyncDatabase, *, tutorial_cache_ttl_seconds: int, login_lockout_seconds: int) -> None:
+async def ensure_indexes(db: AsyncDatabase, *, tutorial_cache_ttl_seconds: int) -> None:
     await db[c.USERS].create_indexes(
         [
             IndexModel([("wallet.xp", DESCENDING)]),
             IndexModel([("handle", ASCENDING)], unique=True),
             IndexModel([("email", ASCENDING)], unique=True),
         ]
-    )
-    await db[c.REFRESH_TOKENS].create_indexes(
-        [
-            IndexModel([("user_id", ASCENDING)]),
-            IndexModel([("expires_at", ASCENDING)], expireAfterSeconds=0),  # expired tokens disappear
-        ]
-    )
-    await db[c.LOGIN_FAILURES].create_indexes(
-        [IndexModel([("first_at", ASCENDING)], expireAfterSeconds=login_lockout_seconds)]
     )
     await db[c.XP_LEDGER].create_indexes(
         [
