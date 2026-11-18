@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import secrets
 from collections.abc import AsyncIterator
@@ -10,6 +11,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from app.api.routes import api_router
 from app.core.config import Settings, get_settings
 from app.core.errors import register_error_handlers
+from app.core.keep_alive import keep_alive_loop, keep_alive_target
 from app.core.logging import configure_logging
 from app.db.indexes import ensure_indexes
 from app.db.mongo import Mongo
@@ -39,6 +41,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.http = http
         app.state.providers = build_providers(http, settings)
         app.state.executor = build_executor(settings)
+        keep_alive_task: asyncio.Task | None = None
         try:
             await ensure_indexes(
                 mongo.db,
@@ -47,8 +50,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             )
             if settings.seed_on_startup and await seed_if_empty(mongo.db):
                 logger.info("Loaded the course and practice catalog into an empty database.")
+            keep_alive_url = keep_alive_target(settings)
+            if keep_alive_url:
+                keep_alive_task = asyncio.create_task(
+                    keep_alive_loop(keep_alive_url, settings.keep_alive_interval_seconds)
+                )
+                logger.info("Keep-alive pinging %s every %ss.", keep_alive_url, settings.keep_alive_interval_seconds)
             yield
         finally:
+            if keep_alive_task:
+                keep_alive_task.cancel()
             await http.aclose()
             await mongo.close()
 

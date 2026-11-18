@@ -50,6 +50,12 @@ class Settings(BaseSettings):
     openrouter_app_url: str = ""
     openrouter_app_name: str = "Logicraft"
 
+    # Keep-alive for Render's free tier: the server pings its own public /health. Render sets
+    # RENDER_EXTERNAL_URL automatically; KEEP_ALIVE_URL overrides it (e.g. custom domain). Both empty = off.
+    keep_alive_url: str = ""
+    render_external_url: str = ""
+    keep_alive_interval_seconds: int = 300
+
     code_executor: Literal["local", "disabled"] = "local"
     code_timeout_seconds: float = 5.0
     code_memory_limit_mb: int = 256

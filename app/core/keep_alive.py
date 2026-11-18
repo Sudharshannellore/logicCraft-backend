@@ -1,0 +1,28 @@
+import asyncio
+import logging
+
+import httpx
+
+from app.core.config import Settings
+
+logger = logging.getLogger(__name__)
+
+
+def keep_alive_target(settings: Settings) -> str | None:
+    """Public health URL to ping, or None when keep-alive is off (e.g. local development)."""
+    base = settings.keep_alive_url or settings.render_external_url
+    if not base:
+        return None
+    return f"{base.rstrip('/')}{settings.api_prefix}/health"
+
+
+async def keep_alive_loop(url: str, interval_seconds: int) -> None:
+    """Ping our own public URL so Render's free tier doesn't put the service to sleep (it idles after ~15 min)."""
+    async with httpx.AsyncClient(timeout=20) as client:
+        while True:
+            await asyncio.sleep(interval_seconds)
+            try:
+                response = await client.get(url)
+                logger.info("keep-alive ping -> %s", response.status_code)
+            except Exception as exc:  # never let a failed ping stop the loop
+                logger.warning("keep-alive ping failed: %s", exc)
